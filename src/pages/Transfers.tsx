@@ -21,14 +21,20 @@ import { TransferApi, buildAttachPartyRequest, buildManualPropertyRequest, trans
 import { isPersistenceDisabled, isPersistenceUnavailable, probeMatterPersistence, serviceUnavailableMessage } from '@/lib/api/serviceStatus'
 
 const Transfers: React.FC = () => {
+  const location = useLocation()
+  const target = (location.state as { transferId?: string } | null)?.transferId || new URLSearchParams(location.search).get('id') || 'new'
+  const scope = useRef({ target, revision: 0, savedTarget: null as string | null })
+  if (scope.current.target !== target) {
+    scope.current = { target, revision: scope.current.revision + (scope.current.savedTarget === target ? 0 : 1), savedTarget: null }
+  }
   return (
-    <TransferProvider>
-      <TransferWorkflow />
+    <TransferProvider key={scope.current.revision}>
+      <TransferWorkflow onMatterCreated={id => { scope.current.savedTarget = id }} />
     </TransferProvider>
   )
 }
 
-const TransferWorkflow: React.FC = () => {
+const TransferWorkflow: React.FC<{ onMatterCreated: (id: string) => void }> = ({ onMatterCreated }) => {
   const navigate = useNavigate()
   const location = useLocation()
   const { state, dispatch } = useTransfer()
@@ -60,6 +66,16 @@ const TransferWorkflow: React.FC = () => {
   const [partySaveState, setPartySaveState] = useState<Record<string, 'saved' | 'failed'>>({})
   const [persistenceError, setPersistenceError] = useState<Error | null>(null)
   const [persistenceChecked, setPersistenceChecked] = useState(false)
+  const [propertyLoading, setPropertyLoading] = useState(Boolean(transferId))
+  const [propertyLoadError, setPropertyLoadError] = useState<string | null>(null)
+  const [propertyLoadAttempt, setPropertyLoadAttempt] = useState(0)
+  const active = useRef(true)
+  const saveInFlight = useRef(false)
+  const locallyCreatedMatter = useRef<string | null>(null)
+  useEffect(() => {
+    active.current = true
+    return () => { active.current = false }
+  }, [])
   // Stable idempotency key for matter creation; generated once per form session
   // so a retried save resolves to the same matter instead of duplicating it.
   const matterRequestKey = useRef<string | null>(null)
@@ -83,37 +99,41 @@ const TransferWorkflow: React.FC = () => {
   // Source-aware party read-back runs through the authenticated v1 lane so a
   // partially saved matter reopens with party sources and identity intact.
   useEffect(() => {
-    if (!transferId) return
+    if (!transferId || transferId === locallyCreatedMatter.current) return
 
     let cancelled = false
+    setPropertyLoading(true)
+    setPropertyLoadError(null)
     const load = async () => {
       const [aggregate, partiesResponse, propertiesResponse] = await Promise.all([
         fetchTransfer(transferId),
         TransferApi.getMatterParties(transferId).catch(() => null),
-        TransferApi.getMatterProperties(transferId).catch(() => null)
+        TransferApi.getMatterProperties(transferId).catch(err => {
+          if (!cancelled) setPropertyLoadError(serviceUnavailableMessage('Linked properties', err))
+          return null
+        })
       ])
       if (cancelled) return
 
       const serverParties = partiesResponse?.data || null
       // Reopen a persisted property link read-only: the saved link + its
       // property projection come from the server, never from local guesses.
-      const firstLink = propertiesResponse?.data?.find(link => link.propertyKind === 'input' && link.property)
-      const linkedHydration = firstLink?.property
-        ? {
-            persistedPropertyLinkId: firstLink.id,
-            propertyRequestId: firstLink.clientRequestId || undefined,
-            linkedProperty: {
-              id: firstLink.property.id,
-              streetAddress: firstLink.property.streetAddress || '',
-              city: firstLink.property.city || '',
-              province: firstLink.property.province || '',
-              postalCode: firstLink.property.postalCode || '',
-              propertyType: firstLink.property.propertyType || '',
-              status: firstLink.property.status || '',
-              manual: firstLink.property.manual
-            }
-          }
-        : {}
+      const firstLink = propertiesResponse?.data?.find(link => link.propertyKind === 'input')
+      const linkedHydration = {
+        savedPropertyLinks: propertiesResponse?.data,
+        persistedPropertyLinkId: firstLink?.id,
+        propertyRequestId: firstLink?.clientRequestId || undefined,
+        linkedProperty: firstLink?.property ? {
+          id: firstLink.property.id,
+          streetAddress: firstLink.property.streetAddress || '',
+          city: firstLink.property.city || '',
+          province: firstLink.property.province || '',
+          postalCode: firstLink.property.postalCode || '',
+          propertyType: firstLink.property.propertyType || '',
+          status: firstLink.property.status || '',
+          manual: firstLink.property.manual
+        } : undefined
+      }
       if (aggregate) {
         dispatch({
           type: 'HYDRATE_TRANSFER',
@@ -143,10 +163,11 @@ const TransferWorkflow: React.FC = () => {
         })
         setPartySaveState(Object.fromEntries(serverParties.map(p => [p.id, 'saved' as const])))
       }
+      setPropertyLoading(false)
     }
     load()
     return () => { cancelled = true }
-  }, [transferId, fetchTransfer, dispatch])
+  }, [transferId, fetchTransfer, dispatch, propertyLoadAttempt])
 
   const handlePrevious = () => {
     dispatch({ type: 'SET_CURRENT_STEP', payload: Math.max(1, currentStep - 1) })
@@ -165,11 +186,12 @@ const TransferWorkflow: React.FC = () => {
   const persistAggregate = async (): Promise<{ matterId: string; failedPartyIds: string[]; propertyFailed: boolean } | null> => {
     setSaveError(null)
     setSaveNotice(null)
-    if (isPersistenceDisabled(persistenceChecked, persistenceError)) return null
+    if (isPersistenceDisabled(persistenceChecked, persistenceError) || propertyLoading || propertyLoadError || saveInFlight.current) return null
     if (!existingMatter && !classificationReady) {
       setSaveError('Choose an available transfer classification before creating the matter.')
       return null
     }
+    saveInFlight.current = true
     setIsSaving(true)
     try {
       // 1. Ensure the matter exists (idempotent via a stable client key).
@@ -178,11 +200,12 @@ const TransferWorkflow: React.FC = () => {
         matterRequestKey.current ||= crypto.randomUUID()
         const created = await TransferApi.createMatter({
           client_request_id: matterRequestKey.current,
-          property_address: state.propertyDetails.address,
+          property_address: state.selectedPropertyId ? state.linkedProperty?.streetAddress || '' : state.propertyDetails.address,
           purchase_price: Number.parseFloat(state.financials.purchasePrice) || 0,
           firm_reference: state.firmReference?.trim() || null,
           classification_code: state.classificationCode
         })
+        if (!active.current) return null
         if (!created.data?.id) {
           setSaveError('The matter could not be created. Your entries remain on this page.')
           return null
@@ -192,6 +215,11 @@ const TransferWorkflow: React.FC = () => {
           type: 'SET_TRANSFER_ID',
           payload: { id: created.data.id, transfer_id: created.data.transferId || undefined }
         })
+        locallyCreatedMatter.current = created.data.id
+        onMatterCreated(created.data.id)
+        const params = new URLSearchParams(location.search)
+        params.set('id', created.data.id)
+        navigate({ pathname: location.pathname, search: `?${params}` }, { replace: true, state: location.state })
       } else {
         // The matter id stays fixed: retries attach to it, never recreate it.
         matterRequestKey.current ||= crypto.randomUUID()
@@ -202,14 +230,14 @@ const TransferWorkflow: React.FC = () => {
       // share one stable client_request_id so retries replay to the same link.
       let propertyFailed: string | null = null
       if (!state.persistedPropertyLinkId) {
-        state.propertyRequestId ||= crypto.randomUUID()
-        propertyRequestKey.current = state.propertyRequestId
-        dispatch({ type: 'UPDATE_PROPERTY_LINK', payload: { propertyRequestId: state.propertyRequestId } })
+        const requestId = state.propertyRequestId || propertyRequestKey.current || crypto.randomUUID()
+        propertyRequestKey.current = requestId
+        dispatch({ type: 'UPDATE_PROPERTY_LINK', payload: { propertyRequestId: requestId } })
         let request
         if (state.selectedPropertyId) {
-          request = { client_request_id: state.propertyRequestId, property_id: state.selectedPropertyId }
+          request = { client_request_id: requestId, property_id: state.selectedPropertyId }
         } else {
-          const built = buildManualPropertyRequest(state.propertyDetails, state.propertyRequestId)
+          const built = buildManualPropertyRequest(state.propertyDetails, requestId)
           if ('error' in built) {
             propertyFailed = built.error
           } else {
@@ -219,11 +247,13 @@ const TransferWorkflow: React.FC = () => {
         if (request) {
           try {
             const attached = await TransferApi.attachMatterProperty(matterId, request)
+            if (!active.current) return null
             if (attached.data?.id) {
               dispatch({
                 type: 'UPDATE_PROPERTY_LINK',
                 payload: {
                   persistedPropertyLinkId: attached.data.id,
+                  savedPropertyLinks: [...(state.savedPropertyLinks || []).filter(link => link.id !== attached.data!.id), attached.data],
                   linkedProperty: attached.data.property
                     ? {
                         id: attached.data.property.id,
@@ -248,10 +278,12 @@ const TransferWorkflow: React.FC = () => {
       }
 
       // 3. Attach each party that has not yet been persisted.
+      if (!active.current) return null
       const failedPartyIds: string[] = []
       const failureReasons: string[] = propertyFailed ? [`Property: ${propertyFailed}`] : []
       const nextSaveState: Record<string, 'saved' | 'failed'> = { ...partySaveState }
       for (const party of state.parties) {
+        if (!active.current) return null
         if (party.persistedPartyId) {
           nextSaveState[party.id] = 'saved'
           continue
@@ -265,6 +297,7 @@ const TransferWorkflow: React.FC = () => {
         }
         try {
           const attached = await TransferApi.attachParty(matterId, request)
+          if (!active.current) return null
           if (attached.data?.id) {
             nextSaveState[party.id] = 'saved'
             dispatch({
@@ -309,19 +342,24 @@ const TransferWorkflow: React.FC = () => {
       }
       return null
     } finally {
-      setIsSaving(false)
+      saveInFlight.current = false
+      if (active.current) setIsSaving(false)
     }
   }
 
   const handleSaveDraft = async () => {
+    if (saveInFlight.current) return
     const result = await persistAggregate()
+    if (!active.current) return
     if (!result) {
       setSaveError(current => current ?? 'The draft could not be saved. Your entries remain on this page.')
     }
   }
 
   const handleSubmit = async () => {
+    if (saveInFlight.current) return
     const result = await persistAggregate()
+    if (!active.current) return
     // Never claim success or navigate while any party or the property failed.
     if (!result || result.failedPartyIds.length > 0 || result.propertyFailed) {
       setSaveError(current => current ?? 'The details could not be saved. Your entries remain on this page.')
@@ -418,7 +456,16 @@ const TransferWorkflow: React.FC = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
-            {renderStep()}
+            {propertyLoading && <p role="status">Loading linked properties...</p>}
+            {propertyLoadError && (
+              <div role="alert" className="mb-4">
+                <p>{propertyLoadError} Saving is disabled until saved property links can be read.</p>
+                <button type="button" onClick={() => setPropertyLoadAttempt(attempt => attempt + 1)}>Retry loading linked properties</button>
+              </div>
+            )}
+            <fieldset disabled={isSaving} className="min-w-0 border-0 p-0">
+              {!propertyLoading && !propertyLoadError && renderStep()}
+            </fieldset>
             <TransferNavigation
               currentStep={currentStep}
               totalSteps={5}
@@ -427,7 +474,7 @@ const TransferWorkflow: React.FC = () => {
               onSave={handleSaveDraft}
               onSubmit={handleSubmit}
               isSaving={isSaving}
-              persistenceDisabled={isPersistenceDisabled(persistenceChecked, persistenceError) || (!existingMatter && !classificationReady)}
+              persistenceDisabled={propertyLoading || Boolean(propertyLoadError) || isPersistenceDisabled(persistenceChecked, persistenceError) || (!existingMatter && !classificationReady)}
             />
           </div>
 

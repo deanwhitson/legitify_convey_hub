@@ -27,18 +27,19 @@ const json = (body, status = 200) => ({
 // POST .../properties body so tests can assert identical-key retries.
 function makeApi(t) {
   const calls = { createMatter: [], attachProperty: [], attachParty: [], documentReads: [] }
+  const fingerprints = new Map()
   let links = []
   let attachBehaviour = t.attachBehaviour || 'success' // 'success' | 'fail-once' | 'drop-once'
   let attachAttempts = 0
   let createdMatter = null
 
   const EXISTING = {
-    'prop-existing-1': { streetAddress: '7 Selected Lane', city: 'Cape Town', province: 'Western Cape', postalCode: '8001' },
-    'prop-existing-2': { streetAddress: '21 Protea Road', city: 'Durban', province: 'KwaZulu-Natal', postalCode: '4001' },
+    '22222222-2222-4222-8222-222222222221': { streetAddress: '7 Selected Lane', city: 'Cape Town', province: 'Western Cape', postalCode: '8001' },
+    '22222222-2222-4222-8222-222222222222': { streetAddress: '21 Protea Road', city: 'Durban', province: 'KwaZulu-Natal', postalCode: '4001' },
   }
 
   const propertyProjection = (manual, over = {}) => ({
-    id: over.id || 'prop-manual-1',
+    id: over.id || '33333333-3333-4333-8333-333333333333',
     streetAddress: '14 Jacaranda Avenue',
     city: 'Pretoria',
     province: 'Gauteng',
@@ -51,9 +52,15 @@ function makeApi(t) {
 
   const projectionForId = (id) => propertyProjection(false, { id, manual: false, ...(EXISTING[id] || {}) })
 
+  const projectionForBody = body => body.property_id ? projectionForId(body.property_id) : propertyProjection(true, {
+    streetAddress: body.property.street_address, city: body.property.city, province: body.property.province,
+    postalCode: body.property.postal_code, propertyType: body.property.property_type,
+    erfNumber: body.property.erf_number, legalDescription: body.property.legal_description, yearBuilt: body.property.year_built,
+  })
+
   const linkRow = (id, property, over = {}) => ({
     id,
-    matterId: MATTER_ID,
+    matterId: '44444444-4444-4444-8444-444444444444',
     propertyId: property.id,
     propertyKind: 'input',
     clientRequestId: over.clientRequestId || null,
@@ -81,7 +88,8 @@ function makeApi(t) {
     }
     if (path === '/api/v1/transfers' && method === 'POST') {
       calls.createMatter.push(JSON.parse(r.request().postData() || '{}'))
-      createdMatter = { id: MATTER_ID, transferId: TRANSFER_ID }
+      if (!calls.createMatter.at(-1).property_address?.trim()) return r.fulfill(json({ detail: 'property_address is required' }, 422))
+      createdMatter = { id: MATTER_ID, transferId: TRANSFER_ID, propertyAddress: calls.createMatter.at(-1).property_address }
       return r.fulfill(json({ message: 'Created', data: { ...createdMatter, created: true } }, 201))
     }
     if (path === `/api/v1/transfers/${MATTER_ID}/properties` && method === 'POST') {
@@ -93,18 +101,19 @@ function makeApi(t) {
       }
       if (attachBehaviour === 'drop-once' && attachAttempts === 1) {
         // Lost response: server commits but the client never sees it.
-        links = [linkRow('link-1', body.property_id
-          ? projectionForId(body.property_id)
-          : propertyProjection(true), { clientRequestId: body.client_request_id })]
+        links = [linkRow('link-1', projectionForBody(body), { clientRequestId: body.client_request_id })]
+        fingerprints.set(body.client_request_id, JSON.stringify(body))
         return r.abort('connectionreset')
       }
       const replay = links.find(l => l.clientRequestId === body.client_request_id)
       if (replay) {
+        if (fingerprints.get(body.client_request_id) !== JSON.stringify(body)) return r.fulfill(json({ error: 'client_request_id was already used with a different payload' }, 409))
         return r.fulfill(json({ message: 'OK', data: { ...replay, created: false } }))
       }
-      const link = linkRow(`link-${links.length + 1}`, body.property_id
-        ? projectionForId(body.property_id)
-        : propertyProjection(true), { clientRequestId: body.client_request_id })
+      const duplicate = body.property_id && links.find(link => link.propertyId === body.property_id && link.propertyKind === 'input')
+      if (duplicate) return r.fulfill(json({ message: 'OK', data: { ...duplicate, created: false } }))
+      const link = linkRow(`link-${links.length + 1}`, projectionForBody(body), { clientRequestId: body.client_request_id })
+      fingerprints.set(body.client_request_id, JSON.stringify(body))
       links.push(link)
       return r.fulfill(json({ message: 'Created', data: { ...link, created: true } }, 201))
     }
@@ -120,13 +129,19 @@ function makeApi(t) {
       return r.fulfill(json({ message: 'OK', data: { parties: [] } }))
     }
     if (path === `/api/v1/transfers/${MATTER_ID}` && method === 'GET') {
-      return r.fulfill(json({ message: 'OK', data: { id: MATTER_ID, transferId: TRANSFER_ID, matterUpdatedAt: '2026-01-01T00:00:00Z', transferUpdatedAt: '2026-01-01T00:00:00Z' } }))
+      return r.fulfill(json({ message: 'OK', data: {
+        id: MATTER_ID, transferId: TRANSFER_ID, propertyAddress: createdMatter?.propertyAddress || '14 Jacaranda Avenue',
+        purchasePrice: 1500000, status: 'in_progress', updatedAt: '2026-01-01T00:00:00Z',
+        matter: { id: '44444444-4444-4444-8444-444444444444', matterType: 'transfer', title: 'Synthetic matter',
+          referenceNumber: 'SYNTHETIC-001', firmReference: null, classificationCode: classification.canonicalCode,
+          status: 'in_progress', updatedAt: '2026-01-01T00:00:00Z' },
+      } }))
     }
     if (path === '/api/v1/properties' && method === 'GET') {
       return r.fulfill(json({
         message: 'OK',
         data: {
-          properties: [projectionForId('prop-existing-1'), projectionForId('prop-existing-2')],
+          properties: [projectionForId('22222222-2222-4222-8222-222222222221'), projectionForId('22222222-2222-4222-8222-222222222222')],
         },
       }))
     }
@@ -151,7 +166,7 @@ function makeApi(t) {
       return r.fulfill(json({ success: true, data: { id: 'doc-1', name: 'FICA Identification', type: 'identification', status: 'pending', catalogueDocumentId: 'cat-1' } }))
     }
     if (path.startsWith('/api/address/')) {
-      return r.fulfill(json({ success: true, data: [] }))
+      return r.fulfill(json({ error: 'Legacy endpoint unavailable' }, 503))
     }
     if (path === `/api/transfers/${TRANSFER_ID}` || path === `/api/transfers/${MATTER_ID}`) {
       return r.fulfill(json({ success: true, data: { id: MATTER_ID, transfer_id: TRANSFER_ID, property_address: '14 Jacaranda Avenue', purchase_price: 1500000, status: 'active' } }))
@@ -248,7 +263,7 @@ await check('manual capture + wizard completion', async () => {
   await completeWizardFromStep2(page)
   await saveAndContinue(page, api)
   await page.waitForURL(`**/transfers/${MATTER_ID}/milestones`)
-  await page.getByText('14 Jacaranda Avenue').waitFor()
+  await page.getByRole('list', { name: 'Linked properties' }).getByText('14 Jacaranda Avenue').waitFor()
   await page.getByText('Manually captured — unverified').waitFor()
   assert.equal(api.calls.createMatter.length, 1)
   assert.equal(api.calls.attachProperty.length, 1)
@@ -277,7 +292,8 @@ await check('select existing property, change it, multiple links on milestones',
   await saveAndContinue(page, api)
   await page.waitForURL(`**/transfers/${MATTER_ID}/milestones`)
   assert.equal(api.calls.attachProperty.length, 1)
-  assert.equal(api.calls.attachProperty[0].property_id, 'prop-existing-2')
+  assert.equal(api.calls.attachProperty[0].property_id, '22222222-2222-4222-8222-222222222222')
+  assert.equal(api.calls.createMatter[0].property_address, '21 Protea Road')
   assert.ok(!('property' in api.calls.attachProperty[0]))
   // Attach a second existing property from the milestones panel.
   await page.getByRole('button', { name: 'Attach existing property' }).click()
@@ -356,10 +372,10 @@ await check('lost-response retry keeps the key and does not duplicate', async ()
 await check('saved-property readback after reload', async () => {
   const api = makeApi({})
   api.links = [{
-    id: 'link-1', matterId: MATTER_ID, propertyId: 'prop-manual-1',
+    id: 'link-1', matterId: MATTER_ID, propertyId: '33333333-3333-4333-8333-333333333333',
     propertyKind: 'input', clientRequestId: 'req-1',
     property: {
-      id: 'prop-manual-1', streetAddress: '14 Jacaranda Avenue', city: 'Pretoria',
+      id: '33333333-3333-4333-8333-333333333333', streetAddress: '14 Jacaranda Avenue', city: 'Pretoria',
       province: 'Gauteng', postalCode: '0181', propertyType: 'Freehold',
       status: 'sold', manual: true,
     },
@@ -375,6 +391,357 @@ await check('saved-property readback after reload', async () => {
   assert.equal(await page.getByRole('button', { name: 'Change' }).count(), 0)
   // Inactive status stays readable.
   await context.close()
+})
+
+const savedLink = (id, address, overrides = {}) => ({
+  id, matterId: '44444444-4444-4444-8444-444444444444', propertyId: `property-${id}`,
+  propertyKind: 'input', clientRequestId: null,
+  property: { id: `property-${id}`, streetAddress: address, city: 'Pretoria', province: 'Gauteng',
+    postalCode: '0181', propertyType: 'Freehold', status: 'active', manual: true },
+  ...overrides,
+})
+
+async function fillSavedCapture(page) {
+  await page.getByRole('button', { name: 'Capture a property', exact: true }).click()
+  const form = page.getByRole('form', { name: 'Capture property' })
+  await form.getByLabel('Street address *', { exact: true }).fill('14 Jacaranda Avenue')
+  await form.getByLabel('City *', { exact: true }).fill('Pretoria')
+  await form.getByLabel('Province *', { exact: true }).fill('Gauteng')
+  await form.getByLabel('Postal code *', { exact: true }).fill('0181')
+  await form.getByLabel('Property type *', { exact: true }).selectOption('Freehold')
+  return form
+}
+
+await check('saved-matter capture validates, preserves failed entries, retries and reloads', async () => {
+  const api = makeApi({ attachBehaviour: 'fail-once' })
+  api.links = [savedLink('prior', 'Prior linked home')]
+  const { page } = await newAuthedPage(browser, api)
+  await page.goto(`${BASE}/transfers/${MATTER_ID}/milestones`)
+  const form = await fillSavedCapture(page)
+  await form.getByLabel('Postal code *', { exact: true }).fill('219')
+  await form.getByRole('button', { name: 'Save property' }).click()
+  await page.getByRole('alert').filter({ hasText: 'four-digit' }).waitFor()
+  assert.equal(api.calls.attachProperty.length, 0)
+  await form.getByLabel('Postal code *', { exact: true }).fill('0181')
+  await form.getByLabel('Year built', { exact: true }).fill('twenty')
+  await form.getByRole('button', { name: 'Save property' }).click()
+  await page.getByRole('alert').filter({ hasText: 'whole number' }).waitFor()
+  assert.equal(api.calls.attachProperty.length, 0)
+  await form.getByLabel('Year built', { exact: true }).fill('2020')
+  await form.getByLabel('Erf number', { exact: true }).fill('1234')
+  await form.getByLabel('Legal description', { exact: true }).fill('Synthetic erf description\nSecond line')
+  await form.getByRole('button', { name: 'Save property' }).click()
+  await page.getByRole('alert').waitFor()
+  assert.equal(await form.getByLabel('Street address *', { exact: true }).inputValue(), '14 Jacaranda Avenue')
+  assert.equal(api.calls.attachProperty.length, 1)
+  await form.getByRole('button', { name: 'Save property' }).click()
+  await page.getByRole('list', { name: 'Linked properties' }).getByText('14 Jacaranda Avenue', { exact: true }).waitFor()
+  assert.deepEqual(api.calls.attachProperty[0], api.calls.attachProperty[1])
+  assert.equal(api.calls.createMatter.length, 0)
+  assert.equal(api.links.length, 2)
+  await page.reload()
+  const list = page.getByRole('list', { name: 'Linked properties' })
+  await list.getByText('Prior linked home').waitFor()
+  assert.equal(await list.getByRole('listitem').count(), 2)
+  await list.getByText('Synthetic erf description').waitFor()
+  assert.equal(await list.getByText('Synthetic erf description').textContent(), 'Synthetic erf description\nSecond line')
+  assert.equal(api.calls.attachProperty[1].property.legal_description, 'Synthetic erf description\nSecond line')
+  await list.getByText(/Erf 1234.*Built 2020/).waitFor()
+  assert.equal(api.calls.attachProperty.length, 2)
+})
+
+await check('saved capture lost-response replay and conflicting edited payload', async () => {
+  const api = makeApi({ attachBehaviour: 'drop-once' })
+  const { page } = await newAuthedPage(browser, api)
+  await page.goto(`${BASE}/transfers/${MATTER_ID}/milestones`)
+  const form = await fillSavedCapture(page)
+  await form.getByRole('button', { name: 'Save property' }).click()
+  await page.getByRole('alert').waitFor()
+  assert.equal(api.links.length, 1)
+  await form.getByLabel('City *', { exact: true }).fill('Changed city')
+  await form.getByRole('button', { name: 'Save property' }).click()
+  await page.getByRole('alert').filter({ hasText: '409' }).waitFor()
+  assert.equal(api.calls.attachProperty[0].client_request_id, api.calls.attachProperty[1].client_request_id)
+  await form.getByLabel('City *', { exact: true }).fill('Pretoria')
+  await form.getByRole('button', { name: 'Save property' }).click()
+  await page.getByRole('list', { name: 'Linked properties' }).waitFor()
+  assert.deepEqual(api.calls.attachProperty[0], api.calls.attachProperty[2])
+  assert.equal(api.links.length, 1)
+})
+
+await check('saved-panel existing-property retries reuse identity and prevent duplicate links', async () => {
+  const api = makeApi({ attachBehaviour: 'drop-once' })
+  const { page } = await newAuthedPage(browser, api)
+  await page.goto(`${BASE}/transfers/${MATTER_ID}/milestones`)
+  await page.getByRole('button', { name: 'Attach existing property' }).click()
+  await page.getByPlaceholder('Address, city, erf or reference...').fill('lane')
+  await page.getByRole('button').filter({ hasText: '7 Selected Lane' }).click()
+  await page.getByRole('alert').waitFor()
+  await page.getByRole('button').filter({ hasText: '7 Selected Lane' }).click()
+  await page.getByRole('list', { name: 'Linked properties' }).getByText('7 Selected Lane').waitFor()
+  assert.deepEqual(api.calls.attachProperty[0], api.calls.attachProperty[1])
+  assert.equal(api.links.length, 1)
+  await page.getByRole('button', { name: 'Attach existing property' }).click()
+  await page.getByPlaceholder('Address, city, erf or reference...').fill('lane')
+  const duplicate = page.getByRole('button').filter({ hasText: '7 Selected Lane' })
+  await duplicate.waitFor()
+  assert.equal(await duplicate.isDisabled(), true)
+  assert.match(await duplicate.innerText(), /Already linked/)
+  assert.equal(api.calls.attachProperty.length, 2)
+})
+
+await check('committed save with failed readback offers GET recovery without a second POST', async () => {
+  const api = makeApi({})
+  const route = api.route
+  let failedRead = false
+  api.route = async r => {
+    if (r.request().method() === 'GET' && new URL(r.request().url()).pathname === `/api/v1/transfers/${MATTER_ID}/properties`
+      && api.calls.attachProperty.length && !failedRead) {
+      failedRead = true
+      return r.fulfill(json({ detail: 'Readback unavailable' }, 503))
+    }
+    return route(r)
+  }
+  const { page } = await newAuthedPage(browser, api)
+  await page.goto(`${BASE}/transfers/${MATTER_ID}/milestones`)
+  const form = await fillSavedCapture(page)
+  await form.getByRole('button', { name: 'Save property' }).click()
+  await page.getByRole('status').filter({ hasText: 'Property saved, but readback failed' }).waitFor()
+  assert.equal(await page.getByRole('list', { name: 'Linked properties' }).count(), 0)
+  await page.getByRole('button', { name: 'Retry loading linked properties' }).click()
+  await page.getByRole('list', { name: 'Linked properties' }).waitFor()
+  assert.equal(api.calls.attachProperty.length, 1)
+  assert.equal(api.links.length, 1)
+})
+
+await check('wizard readback keeps all input/output links and fails closed on read errors', async () => {
+  const api = makeApi({})
+  api.links = [savedLink('one', 'First linked home'), savedLink('two', 'Second linked home'),
+    savedLink('output', '', { propertyKind: 'output', property: null, propertyId: null, externalPropertyId: 'Synthetic output reference' })]
+  api.links[0].property.status = 'sold'
+  let failRead = true
+  const route = api.route
+  api.route = r => failRead && new URL(r.request().url()).pathname === `/api/v1/transfers/${MATTER_ID}/properties`
+    ? r.fulfill(json({ detail: 'Readback unavailable' }, 503)) : route(r)
+  const { page } = await newAuthedPage(browser, api)
+  await page.goto(`${BASE}/transfers/workflow?id=${MATTER_ID}`)
+  await page.getByRole('alert').filter({ hasText: 'Saving is disabled' }).waitFor()
+  assert.equal(await page.getByRole('button', { name: 'Save Details' }).isDisabled(), true)
+  assert.equal(await page.getByPlaceholder('Start typing the address...').count(), 0)
+  failRead = false
+  await page.getByRole('button', { name: 'Retry loading linked properties' }).click()
+  const list = page.getByRole('list', { name: 'Linked properties' })
+  await list.getByText('Second linked home').waitFor()
+  await list.getByText('Synthetic output reference').waitFor()
+  await list.getByText('sold', { exact: true }).waitFor()
+  assert.equal(await list.getByRole('listitem').count(), 3)
+  await page.reload()
+  await list.getByText('Second linked home').waitFor()
+  assert.equal(await list.getByRole('listitem').count(), 3)
+  assert.equal(api.calls.attachProperty.length, 0)
+})
+
+for (const surface of ['wizard', 'saved panel']) {
+  await check(`${surface} ignores stale searches and clears pending results`, async () => {
+    const api = makeApi({})
+    const route = api.route
+    let oldRoute
+    let requested
+    let firstRequest = new Promise(resolve => { requested = resolve })
+    api.route = r => {
+      const url = new URL(r.request().url())
+      if (url.pathname === '/api/v1/properties') {
+        if (url.searchParams.get('query') === 'old') { oldRoute = r; requested(); return }
+        return r.fulfill(json({ data: { properties: [{ ...savedLink('new', 'Newest search result').property, manual: false }] } }))
+      }
+      return route(r)
+    }
+    const { page } = await newAuthedPage(browser, api)
+    await page.goto(surface === 'wizard' ? `${BASE}/transfers/workflow` : `${BASE}/transfers/${MATTER_ID}/milestones`)
+    if (surface === 'saved panel') await page.getByRole('button', { name: 'Attach existing property' }).click()
+    const input = page.getByPlaceholder(surface === 'wizard' ? "Search your institution's properties by address, city, erf or reference..." : 'Address, city, erf or reference...')
+    await input.fill('old')
+    await firstRequest
+    await input.fill('new')
+    await page.getByText('Newest search result', { exact: true }).waitFor()
+    await oldRoute.fulfill(json({ data: { properties: [savedLink('old', 'Stale search result').property] } }))
+    await page.waitForTimeout(100)
+    assert.equal(await page.getByText('Stale search result', { exact: true }).count(), 0)
+    assert.equal(await page.getByText('Newest search result', { exact: true }).count(), 1)
+    firstRequest = new Promise(resolve => { requested = resolve })
+    await input.fill('old')
+    await firstRequest
+    await input.fill('')
+    await oldRoute.fulfill(json({ detail: 'late search error' }, 503))
+    await page.waitForTimeout(100)
+    assert.equal(await page.getByText('Searching...', { exact: true }).count(), 0)
+    assert.equal(await page.getByText('Newest search result', { exact: true }).count(), 0)
+    assert.equal(await page.getByText(/late search error/).count(), 0)
+  })
+}
+
+for (const surface of ['wizard', 'saved panel']) {
+  await check(`${surface} discards old-matter readback after in-app navigation`, async () => {
+    const otherId = '55555555-5555-4555-8555-555555555555'
+    const api = makeApi({})
+    const route = api.route
+    let oldRoute
+    let requested
+    const firstRequest = new Promise(resolve => { requested = resolve })
+    api.route = r => {
+      const path = new URL(r.request().url()).pathname
+      if (path === `/api/v1/transfers/${MATTER_ID}/properties`) { oldRoute = r; requested(); return }
+      if (path === `/api/v1/transfers/${otherId}/properties`) return r.fulfill(json({ data: { properties: [savedLink('new-matter', 'New matter property')] } }))
+      if (path.startsWith(`/api/v1/transfers/${otherId}`)) return r.fulfill(json({ data: path.endsWith('/parties') ? { parties: [] } : { id: otherId, transferId: 'TRF-SYNTHETIC-OTHER' } }))
+      return route(r)
+    }
+    const { page } = await newAuthedPage(browser, api)
+    const target = id => surface === 'wizard' ? `/transfers/workflow?id=${id}` : `/transfers/${id}/milestones`
+    await page.goto(`${BASE}${target(MATTER_ID)}`)
+    await firstRequest
+    await page.evaluate(url => { history.pushState({}, '', url); window.dispatchEvent(new PopStateEvent('popstate')) }, target(otherId))
+    await page.getByRole('list', { name: 'Linked properties' }).getByText('New matter property').waitFor()
+    await oldRoute.fulfill(json({ data: { properties: [savedLink('old-matter', 'Old matter property')] } }))
+    await page.waitForTimeout(100)
+    assert.equal(await page.getByText('Old matter property', { exact: true }).count(), 0)
+    assert.equal(await page.getByRole('list', { name: 'Linked properties' }).getByText('New matter property').count(), 1)
+  })
+}
+
+for (const status of [403, 404]) {
+  await check(`property read denial ${status} exposes no saved-matter mutation controls`, async () => {
+    const api = makeApi({})
+    const route = api.route
+    api.route = r => new URL(r.request().url()).pathname === `/api/v1/transfers/${MATTER_ID}/properties`
+      ? r.fulfill(json({ detail: 'Not permitted' }, status)) : route(r)
+    const { page } = await newAuthedPage(browser, api)
+    await page.goto(`${BASE}/transfers/${MATTER_ID}/milestones`)
+    await page.getByRole('button', { name: 'Retry loading linked properties' }).waitFor()
+    assert.equal(await page.getByRole('button', { name: 'Capture a property' }).count(), 0)
+    assert.equal(await page.getByRole('button', { name: 'Attach existing property' }).count(), 0)
+    assert.equal(api.calls.attachProperty.length, 0)
+  })
+}
+
+for (const status of [403, 422]) {
+  await check(`saved manual capture surfaces server ${status} without inventing a link`, async () => {
+    const api = makeApi({})
+    const route = api.route
+    let posts = 0
+    api.route = r => {
+      if (r.request().method() === 'POST' && new URL(r.request().url()).pathname === `/api/v1/transfers/${MATTER_ID}/properties`) {
+        posts += 1
+        return r.fulfill(json({ detail: 'Synthetic rejected write' }, status))
+      }
+      return route(r)
+    }
+    const { page } = await newAuthedPage(browser, api)
+    await page.goto(`${BASE}/transfers/${MATTER_ID}/milestones`)
+    const form = await fillSavedCapture(page)
+    await form.getByRole('button', { name: 'Save property' }).click()
+    await page.getByRole('alert').filter({ hasText: String(status) }).waitFor()
+    assert.equal(await form.getByLabel('Street address *', { exact: true }).inputValue(), '14 Jacaranda Avenue')
+    assert.equal(api.links.length, 0)
+    assert.equal(posts, 1)
+    assert.equal(await page.getByRole('list', { name: 'Linked properties' }).count(), 0)
+  })
+}
+
+await check('pending capture is single-flight and cannot update a different matter after navigation', async () => {
+  const otherId = '55555555-5555-4555-8555-555555555555'
+  const api = makeApi({})
+  const route = api.route
+  let pendingRoute
+  let requested
+  let posts = 0
+  let oldReads = 0
+  const requestStarted = new Promise(resolve => { requested = resolve })
+  api.route = r => {
+    const path = new URL(r.request().url()).pathname
+    if (path === `/api/v1/transfers/${MATTER_ID}/properties`) {
+      if (r.request().method() === 'POST') { posts += 1; pendingRoute = r; requested(); return }
+      oldReads += 1
+    }
+    if (path === `/api/v1/transfers/${otherId}/properties`) return r.fulfill(json({ data: { properties: [savedLink('other', 'Other matter property')] } }))
+    if (path.startsWith(`/api/v1/transfers/${otherId}`)) return r.fulfill(json({ data: path.endsWith('/parties') ? { parties: [] } : { id: otherId } }))
+    return route(r)
+  }
+  const { page } = await newAuthedPage(browser, api)
+  await page.goto(`${BASE}/transfers/${MATTER_ID}/milestones`)
+  const form = await fillSavedCapture(page)
+  await form.getByRole('button', { name: 'Save property' }).click()
+  await requestStarted
+  assert.equal(await form.getByRole('button', { name: 'Save property' }).isDisabled(), true)
+  assert.equal(await page.getByRole('button', { name: 'Cancel', exact: true }).isDisabled(), true)
+  await form.getByRole('button', { name: 'Save property' }).evaluate(button => button.click())
+  assert.equal(posts, 1)
+  await page.evaluate(url => { history.pushState({}, '', url); window.dispatchEvent(new PopStateEvent('popstate')) }, `/transfers/${otherId}/milestones`)
+  await page.getByRole('list', { name: 'Linked properties' }).getByText('Other matter property').waitFor()
+  await pendingRoute.fulfill(json({ data: savedLink('late', '14 Jacaranda Avenue'), message: 'Created' }, 201))
+  await page.waitForTimeout(100)
+  assert.equal(oldReads, 1)
+  assert.equal(await page.getByText('14 Jacaranda Avenue', { exact: true }).count(), 0)
+  assert.equal(await page.getByRole('status').filter({ hasText: 'Property saved' }).count(), 0)
+})
+
+await check('inactive discovery results cannot become new links', async () => {
+  const api = makeApi({})
+  const route = api.route
+  const property = { ...savedLink('inactive', 'Inactive candidate').property, status: 'sold' }
+  api.route = r => new URL(r.request().url()).pathname === '/api/v1/properties'
+    ? r.fulfill(json({ data: { properties: [property] } })) : route(r)
+  const { page } = await newAuthedPage(browser, api)
+  await page.goto(`${BASE}/transfers/${MATTER_ID}/milestones`)
+  await page.getByRole('button', { name: 'Attach existing property' }).click()
+  await page.getByPlaceholder('Address, city, erf or reference...').fill('inactive')
+  const result = page.getByRole('button').filter({ hasText: 'Inactive candidate' })
+  await result.waitFor()
+  assert.equal(await result.isDisabled(), true)
+  assert.equal(api.calls.attachProperty.length, 0)
+})
+
+for (const surface of ['wizard', 'saved panel']) {
+  await check(`${surface} shows empty search results only after the current response`, async () => {
+    const api = makeApi({})
+    const route = api.route
+    let pendingRoute
+    let requested
+    const requestStarted = new Promise(resolve => { requested = resolve })
+    api.route = r => {
+      if (new URL(r.request().url()).pathname === '/api/v1/properties') { pendingRoute = r; requested(); return }
+      return route(r)
+    }
+    const { page } = await newAuthedPage(browser, api)
+    await page.goto(surface === 'wizard' ? `${BASE}/transfers/workflow` : `${BASE}/transfers/${MATTER_ID}/milestones`)
+    if (surface === 'saved panel') await page.getByRole('button', { name: 'Attach existing property' }).click()
+    const input = page.getByPlaceholder(surface === 'wizard' ? "Search your institution's properties by address, city, erf or reference..." : 'Address, city, erf or reference...')
+    await input.fill('nothing')
+    await requestStarted
+    assert.equal(await page.getByText('No matching properties.', { exact: true }).count(), 0)
+    await pendingRoute.fulfill(json({ data: { properties: [] } }))
+    await page.getByText('No matching properties.', { exact: true }).waitFor()
+    await input.fill('')
+    assert.equal(await page.getByText('No matching properties.', { exact: true }).count(), 0)
+  })
+}
+
+await check('Save Details binds the saved matter URL and reloads without creating again', async () => {
+  const api = makeApi({})
+  const { page } = await newAuthedPage(browser, api)
+  await page.goto(`${BASE}/transfers/workflow`)
+  await page.getByLabel('Transfer classification', { exact: true }).selectOption(classification.canonicalCode)
+  await page.getByPlaceholder('Start typing the address...').fill('14 Jacaranda Avenue')
+  await page.getByPlaceholder('Santon').fill('Pretoria')
+  await page.getByPlaceholder('Gouteng').fill('Gauteng')
+  await page.getByPlaceholder('2196').fill('0181')
+  await page.locator('select').filter({ has: page.locator('option[value="Freehold"]') }).selectOption('Freehold')
+  await page.getByRole('button', { name: 'Save Details' }).click()
+  await page.getByText('Matter, property and all parties saved.', { exact: true }).waitFor()
+  assert.equal(new URL(page.url()).searchParams.get('id'), MATTER_ID)
+  await page.reload()
+  await page.getByRole('list', { name: 'Linked properties' }).getByText('14 Jacaranda Avenue').waitFor()
+  assert.equal(api.calls.createMatter.length, 1)
+  assert.equal(api.calls.attachProperty.length, 1)
 })
 
 await browser.close()

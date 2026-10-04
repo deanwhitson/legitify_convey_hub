@@ -869,3 +869,30 @@ classification review does not waive them or authorize deployment.
   6 checksum tests, all three typechecks and the production build passed.
   Browser checks: 10 session-isolation plus 37 existing static-build checks;
   synthetic transport only. No live auth/DB services, migrations or M1 work.
+
+## DEEDLY-191 bounded property UI slice
+
+- Saved-matter capture and existing-property attachment use the existing
+  `POST /api/v1/transfers/{transfer UUID}/properties` contract. The transfer UUID
+  is not the linked matter row UUID or the display reference. Search and readback
+  keep their staff-only, institution-scoped backend contracts; no grants change.
+- Both property search surfaces reject late responses. Saved-matter changes reset
+  panel state; the wizard preserves all returned links on reload rather than
+  displaying only the first. Confirmed matter creation binds its UUID into the
+  wizard URL without resetting the current form or in-flight replay keys.
+- Capture/attach retries retain request identity. A successful POST followed by a
+  failed GET is reported as saved with unavailable readback and offers GET-only
+  recovery. Failed/malformed property readback never means an empty saved list.
+- Existing inactive, output and projection-less links remain readable. New UI
+  writes remain input links only. Property editing/unlinking, primary selection,
+  ordering, area capture, registry verification and cross-key manual deduplication
+  require separate approved contracts; do not infer them from this slice.
+- `BASE=http://127.0.0.1:<static-port> node e2e/matter-properties.check.mjs`
+  covers capture/select, validation and write denials, failed/lost responses,
+  duplicate/replay/conflict handling, multiple links, reload and stale requests.
+  It intercepts every API request and blocks external requests; this is mocked
+  browser evidence, not deployed auth, database, provider or privilege certification.
+- Run Node tests under Node 24 with the existing `scripts/offline-test-guard.mjs`
+  preload and empty database DSNs/disabled DB opt-ins. On Windows, invoke the
+  selected Node executable directly: `npm.cmd` can use its adjacent Node binary
+  even when another Node directory precedes it on PATH.

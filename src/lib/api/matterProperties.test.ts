@@ -106,6 +106,15 @@ describe('matter–property API calls', () => {
     assert.deepEqual(response.data, [{ id: 'p1' }])
   })
 
+  it('rejects missing or malformed property arrays instead of claiming an empty readback', async () => {
+    for (const data of [undefined, {}, { properties: null }, { properties: {} }]) {
+      const response = respond({ message: 'OK', data })
+      await assert.rejects(TransferApi.getMatterProperties('transfer-uuid'), /Invalid property readback/)
+      await assert.rejects(TransferApi.searchProperties('main'), /Invalid property search/)
+      response.mock.restore()
+    }
+  })
+
   it('unwraps the readback properties array', async () => {
     respond({ message: 'OK', data: { properties: [{ id: 'l1' }, { id: 'l2' }] } })
     const response = await TransferApi.getMatterProperties('transfer-uuid')

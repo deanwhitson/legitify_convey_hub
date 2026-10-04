@@ -10,6 +10,7 @@ import { apiRequest } from '@/lib/api/http'
 import { serviceUnavailableMessage } from '@/lib/api/serviceStatus'
 import { TransferApi, PROPERTY_TYPES, type PropertyRecordApi } from '@/lib/api/transferApi'
 import { useTransfer, PropertyDetails } from './TransferForm'
+import { MatterPropertyLinks } from './MatterPropertiesPanel'
 
 const StepProperty: React.FC = () => {
   const { state, dispatch } = useTransfer()
@@ -182,41 +183,45 @@ const StepProperty: React.FC = () => {
   const [propertySearch, setPropertySearch] = useState('')
   const [propertyResults, setPropertyResults] = useState<PropertyRecordApi[]>([])
   const [isPropertySearching, setIsPropertySearching] = useState(false)
+  const [propertySearchCompleted, setPropertySearchCompleted] = useState(false)
   const [propertySearchError, setPropertySearchError] = useState('')
   const propertySearchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const propertySearchVersion = useRef(0)
 
   const linkedOrSelected = Boolean(state.persistedPropertyLinkId || state.selectedPropertyId)
 
   useEffect(() => {
-    if (propertySearchTimeout.current) {
-      clearTimeout(propertySearchTimeout.current)
-    }
+    const version = ++propertySearchVersion.current
+    if (propertySearchTimeout.current) clearTimeout(propertySearchTimeout.current)
     setPropertySearchError('')
-    if (linkedOrSelected || propertySearch.trim().length < 3) {
-      setPropertyResults([])
-      return
-    }
+    setPropertyResults([])
+    setIsPropertySearching(false)
+    setPropertySearchCompleted(false)
+    if (linkedOrSelected || propertySearch.trim().length < 3) return
     setIsPropertySearching(true)
     propertySearchTimeout.current = setTimeout(async () => {
       try {
         const response = await TransferApi.searchProperties(propertySearch.trim())
-        setPropertyResults(response.data ?? [])
+        if (version === propertySearchVersion.current) {
+          setPropertyResults(response.data ?? [])
+          setPropertySearchCompleted(true)
+        }
       } catch (err) {
-        setPropertyResults([])
-        setPropertySearchError(serviceUnavailableMessage('Property search', err))
+        if (version === propertySearchVersion.current) setPropertySearchError(serviceUnavailableMessage('Property search', err))
       } finally {
-        setIsPropertySearching(false)
+        if (version === propertySearchVersion.current) setIsPropertySearching(false)
       }
     }, 400)
     return () => {
-      if (propertySearchTimeout.current) {
-        clearTimeout(propertySearchTimeout.current)
-      }
+      propertySearchVersion.current += 1
+      if (propertySearchTimeout.current) clearTimeout(propertySearchTimeout.current)
     }
   }, [propertySearch, linkedOrSelected])
 
   const selectExistingProperty = (property: PropertyRecordApi) => {
     if (property.status !== 'active') return
+    propertySearchVersion.current += 1
+    setIsPropertySearching(false)
     dispatch({
       type: 'UPDATE_PROPERTY_LINK',
       payload: {
@@ -258,8 +263,17 @@ const StepProperty: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {Boolean(state.savedPropertyLinks?.length) && (
+          <Card variant="premium" className="lg:col-span-2">
+            <CardHeader><CardTitle>{state.savedPropertyLinks!.length === 1 ? 'Linked property' : 'Linked properties'}</CardTitle></CardHeader>
+            <CardContent>
+              <MatterPropertyLinks links={state.savedPropertyLinks!} />
+              <p className="mt-2 text-xs text-gray-500">Saved links cannot be removed here; additional properties can be attached from the matter page.</p>
+            </CardContent>
+          </Card>
+        )}
         {/* Linked / selected property */}
-        {linkedOrSelected && state.linkedProperty && (
+        {linkedOrSelected && state.linkedProperty && !state.savedPropertyLinks?.length && (
           <Card variant="premium" className="lg:col-span-2">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
@@ -318,7 +332,7 @@ const StepProperty: React.FC = () => {
                   variant="premium"
                   placeholder="Search your institution's properties by address, city, erf or reference..."
                   value={propertySearch}
-                  onChange={(e) => setPropertySearch(e.target.value)}
+                  onChange={(e) => { propertySearchVersion.current += 1; setPropertyResults([]); setPropertySearchCompleted(false); setPropertySearch(e.target.value) }}
                   className="pl-10 transition-all duration-200 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                 />
               </div>
@@ -327,6 +341,9 @@ const StepProperty: React.FC = () => {
               )}
               {propertySearchError && (
                 <p className="mt-2 text-xs text-red-600 dark:text-red-400">{propertySearchError}</p>
+              )}
+              {propertySearchCompleted && !isPropertySearching && !propertySearchError && propertyResults.length === 0 && (
+                <p className="mt-2 text-sm text-gray-500">No matching properties.</p>
               )}
               {propertyResults.length > 0 && (
                 <div className="mt-2 max-h-60 overflow-auto rounded-lg border border-gray-200 dark:border-navy-700">

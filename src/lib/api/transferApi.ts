@@ -422,7 +422,8 @@ export class TransferApi {
     if (query.trim()) params.set('query', query.trim())
     params.set('limit', String(limit))
     const response = await apiRequest<ApiResponse<{ properties: PropertyRecordApi[] }>>(`/api/v1/properties?${params}`)
-    return { ...response, data: response.data?.properties }
+    if (!Array.isArray(response.data?.properties)) throw new Error('Invalid property search response')
+    return { ...response, data: response.data.properties }
   }
 
   /** Attach a property to a matter: link an existing property_id or capture a
@@ -436,7 +437,8 @@ export class TransferApi {
    * remain readable regardless of the property's current status. */
   static async getMatterProperties(transferId: string): Promise<ApiResponse<MatterPropertyLinkApi[]>> {
     const response = await apiRequest<ApiResponse<{ properties: MatterPropertyLinkApi[] }>>(`/api/v1/transfers/${transferId}/properties`)
-    return { ...response, data: response.data?.properties }
+    if (!Array.isArray(response.data?.properties)) throw new Error('Invalid property readback response')
+    return { ...response, data: response.data.properties }
   }
 }
 

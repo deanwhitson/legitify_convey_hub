@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useReducer, ReactNode } from 'react'
 import { calculateTotalTransferCosts, formatZAR } from '@/utils/transferCalculations'
 import type { GoldenRecordEntityType } from '@/lib/api/goldenRecordsApi'
+import type { MatterPropertyLinkApi } from '@/lib/api/transferApi'
 
 // Types
 export interface PropertyDetails {
@@ -109,6 +110,7 @@ export interface TransferState {
   persistedPropertyLinkId?: string
   /** Stable idempotency key for the property attach; reused on retries. */
   propertyRequestId?: string
+  savedPropertyLinks?: MatterPropertyLinkApi[]
   parties: Party[]
   financials: Financials
   documents: Document[]
@@ -164,7 +166,7 @@ type TransferAction =
   | { type: 'SET_DOCUMENTS'; payload: Document[] }
   | { type: 'SET_STATUS'; payload: 'draft' | 'in_progress' | 'completed' }
   | { type: 'SET_TRANSFER_ID'; payload: { id?: string; transfer_id?: string } }
-  | { type: 'UPDATE_PROPERTY_LINK'; payload: Pick<TransferState, 'selectedPropertyId' | 'linkedProperty' | 'persistedPropertyLinkId' | 'propertyRequestId'> }
+  | { type: 'UPDATE_PROPERTY_LINK'; payload: Pick<TransferState, 'selectedPropertyId' | 'linkedProperty' | 'persistedPropertyLinkId' | 'propertyRequestId' | 'savedPropertyLinks'> }
   | { type: 'HYDRATE_TRANSFER'; payload: TransferState }
   | { type: 'RESET_FORM' }
 
