@@ -946,9 +946,15 @@ Milestone review Python regression runner: python scripts/verify-milestone-overv
   the address is independently verified. A post-reload restored session has
   `user: null` (refresh does not re-fetch profile), so the neutral fallback
   is expected after reload until login supplies the user object again.
-- The unrelated `generatedBy = 'John Doe'` default in
-  `src/lib/documentGenerator.ts` is the browser-only generation path's local
-  actor default — separate roadmap M9 work, deliberately untouched.
+- Generation provenance (corrected on `p0/generation-provenance-actor`):
+  `documentGenerator.ts` no longer defaults `generatedBy` to 'John Doe'. The
+  embedded `generationEvents[].actor` (renamed from `auditHistory` — it is
+  display metadata, not an authoritative audit record) carries the session
+  display name or "User name unavailable". The generator page is a DEMO
+  (synthetic `TRANSFER_DATA`, `DEMO-` filename prefix, labelled banner); its
+  history card is "Local Generation History". `/api/generated-documents`
+  remains quarantined on both servers; when re-enabled, `actor_name` must be
+  derived server-side (verified `user_id`), not client-supplied free text.
 - Regression coverage: `src/layouts/Header.test.tsx` (SSR markup via the
   session module directly, incl. malformed-field safety; no browser, auth
   server or provider mocks) plus `e2e/header-identity.check.mjs` — a mounted

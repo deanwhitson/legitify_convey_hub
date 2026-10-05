@@ -4,6 +4,7 @@ import { Button } from '@/components/ui'
 import { cn } from '@/utils/cn'
 import { useNavigate } from 'react-router-dom'
 import { getSession, onSessionChange } from '@/lib/api/session'
+import { sessionUserDisplayName } from '@/lib/sessionIdentity'
 
 interface HeaderProps {
   className?: string
@@ -17,14 +18,7 @@ function text(value: unknown): string {
 // BFF login response. Nothing is fabricated: with no usable field the header
 // shows a neutral label rather than a placeholder person.
 export function sessionDisplayName(user: Record<string, unknown> | null | undefined): string {
-  if (!user) return 'Signed-in user'
-  const direct = text(user.name) || text(user.display_name) || text(user.full_name)
-  if (direct) return direct
-  const first = text(user.first_name) || text(user.firstName)
-  const last = text(user.last_name) || text(user.lastName) || text(user.surname)
-  const combined = `${first} ${last}`.trim()
-  if (combined) return combined
-  return text(user.email) || 'Signed-in user'
+  return sessionUserDisplayName(user) || 'Signed-in user'
 }
 
 export function sessionSubtitle(user: Record<string, unknown> | null | undefined): string {
