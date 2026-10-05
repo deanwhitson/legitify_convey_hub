@@ -930,3 +930,30 @@ classification review does not waive them or authorize deployment.
   not deployed auth, database, grant or provider certification.
 
 Milestone review Python regression runner: python scripts/verify-milestone-overview-offline.py. It selects six offline suites, disables dotenv and credential configuration, blocks asyncpg connections/pools and external sockets, permits only the Windows asyncio internal socketpair, and fails on any blocked attempt.
+
+## DEEDLY-257 header session identity
+
+- The app-shell header renders only the verified session user
+  (`AuthSession.user` from the BFF login response, relayed upstream data) via
+  `useSyncExternalStore(onSessionChange, getSession, getSession)` — the same
+  source `useAuth` wraps. Logout, account switch and post-reload restore
+  update it without provider ordering assumptions.
+- Name derivation (`sessionDisplayName`): `name`/`display_name`/`full_name`,
+  then `first_name`+`last_name`/`surname` (or camelCase), then session
+  `email`, else the neutral "Signed-in user". Subtitle
+  (`sessionSubtitle`) shows only `role_name`/`roleName` and institution
+  fields; nothing is fabricated. Displaying a session email does not claim
+  the address is independently verified. A post-reload restored session has
+  `user: null` (refresh does not re-fetch profile), so the neutral fallback
+  is expected after reload until login supplies the user object again.
+- The unrelated `generatedBy = 'John Doe'` default in
+  `src/lib/documentGenerator.ts` is the browser-only generation path's local
+  actor default — separate roadmap M9 work, deliberately untouched.
+- Regression coverage: `src/layouts/Header.test.tsx` (SSR markup via the
+  session module directly, incl. malformed-field safety; no browser, auth
+  server or provider mocks) plus `e2e/header-identity.check.mjs` — a mounted
+  Playwright check on a loopback Vite dev server (`BASE`, default 4293) that
+  drives the real session module and the real login/logout UI: account switch,
+  same-session in-place update, UI sign-out + re-login, mid-session clear,
+  malformed login identity, and restored-session fallback. Mocked auth/API
+  only; not live certification.

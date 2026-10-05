@@ -3,14 +3,47 @@ import { Bell, Search, User, Moon, Sun, Home } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { cn } from '@/utils/cn'
 import { useNavigate } from 'react-router-dom'
+import { getSession, onSessionChange } from '@/lib/api/session'
 
 interface HeaderProps {
   className?: string
 }
 
+function text(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : ''
+}
+
+// Display identity comes only from the verified session user relayed by the
+// BFF login response. Nothing is fabricated: with no usable field the header
+// shows a neutral label rather than a placeholder person.
+export function sessionDisplayName(user: Record<string, unknown> | null | undefined): string {
+  if (!user) return 'Signed-in user'
+  const direct = text(user.name) || text(user.display_name) || text(user.full_name)
+  if (direct) return direct
+  const first = text(user.first_name) || text(user.firstName)
+  const last = text(user.last_name) || text(user.lastName) || text(user.surname)
+  const combined = `${first} ${last}`.trim()
+  if (combined) return combined
+  return text(user.email) || 'Signed-in user'
+}
+
+export function sessionSubtitle(user: Record<string, unknown> | null | undefined): string {
+  if (!user) return ''
+  return [
+    text(user.role_name) || text(user.roleName),
+    text(user.accountable_institution_name) || text(user.institution_name),
+  ].filter(Boolean).join(' · ')
+}
+
 const Header: React.FC<HeaderProps> = ({ className }) => {
   const [isDarkMode, setIsDarkMode] = React.useState(false)
   const navigate = useNavigate()
+  // Subscribed to the session module itself (the same source useAuth wraps),
+  // so the name updates on login, clears on logout and switches on account
+  // change without depending on provider mount order.
+  const session = React.useSyncExternalStore(onSessionChange, getSession, getSession)
+  const displayName = sessionDisplayName(session?.user)
+  const subtitle = sessionSubtitle(session?.user)
 
   React.useEffect(() => {
     const isDark = localStorage.getItem('darkMode') === 'true'
@@ -72,8 +105,8 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
               <User className="h-4 w-4 text-white" />
             </div>
             <div className="hidden sm:block">
-              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">John Doe</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Senior Partner</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{displayName}</p>
+              {subtitle ? <p className="text-xs text-gray-500 dark:text-gray-400">{subtitle}</p> : null}
             </div>
           </div>
         </div>
