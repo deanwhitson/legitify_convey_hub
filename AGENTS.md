@@ -896,3 +896,37 @@ classification review does not waive them or authorize deployment.
   preload and empty database DSNs/disabled DB opt-ins. On Windows, invoke the
   selected Node executable directly: `npm.cmd` can use its adjacent Node binary
   even when another Node directory precedes it on PATH.
+
+## DEEDLY-170A read-only milestone overview slice
+
+- Milestone and activity reads bind through the canonical
+  `transfers.matter_id` relationship only (`JOIN transfers t ON
+  t.matter_id = m.id`), rechecking `t.accountable_institution_id`,
+  `m.accountable_institution_id` and `m.matter_type = 'transfer'` in the read
+  itself. `matters.source_record_id` has no uniqueness constraint and is never
+  used as a fallback; missing, foreign or wrong-type canonical associations
+  fail explicitly with 409, while duplicate legacy links are ignored. Reads
+  never repair associations.
+- The milestone overview renders only returned rows, preserves returned order,
+  and keeps loading, failed, malformed and genuinely empty reads distinct.
+  Counts are recorded milestone information, never legal readiness or transfer
+  completion. Milestone and activity failures are independent; activity may be
+  unavailable under the reviewed pilot grant matrix (no `milestone_history`
+  grant) — that conflict stays explicit and grants are unchanged.
+- Milestone editing, status changes, workflow transitions, instantiation,
+  completion, waivers and reopening have no approved contract. UI issues no
+  legacy milestone mutation requests; `TransferApi.updateMilestones` and
+  `useTransfers.updateMilestones` fail without issuing a request. Do not
+  restore quarantined milestone handlers or infer progression rules.
+- No local audit events are fabricated. Activity rows render only returned
+  data; a missing actor shows "Actor not recorded". The app-shell header's
+  hard-coded "John Doe" display name is a separate pre-existing issue outside
+  this slice.
+- `BASE=http://127.0.0.1:<static-port> node e2e/milestone-overview.check.mjs`
+  covers empty/malformed/failed reads, independent milestone/activity
+  failures and retries, order preservation, no-editor read-only rendering,
+  matter-switch clearing and stale-response rejection. It intercepts every
+  API request and blocks external requests; this is mocked browser evidence,
+  not deployed auth, database, grant or provider certification.
+
+Milestone review Python regression runner: python scripts/verify-milestone-overview-offline.py. It selects six offline suites, disables dotenv and credential configuration, blocks asyncpg connections/pools and external sockets, permits only the Windows asyncio internal socketpair, and fails on any blocked attempt.

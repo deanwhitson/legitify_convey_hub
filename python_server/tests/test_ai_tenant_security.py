@@ -71,6 +71,7 @@ class InstitutionBoundaryRouteTests(unittest.IsolatedAsyncioTestCase):
         )
         self.stack.enter_context(patch.object(app.state, "entities_client", self.entities, create=True))
         self.legacy_calls = []
+        self.workflow_matter = "66666666-6666-4666-8666-666666666666"
         self.outbound = self.stack.enter_context(patch(
             "httpx.AsyncHTTPTransport.handle_async_request",
             AsyncMock(side_effect=AssertionError("Unexpected provider request")),
@@ -97,8 +98,38 @@ class InstitutionBoundaryRouteTests(unittest.IsolatedAsyncioTestCase):
         )
         self.addAsyncCleanup(self.client.aclose)
 
+    async def test_milestones_ignore_mismatched_and_duplicate_legacy_associations(self):
+        self.workflow_matter = "66666666-6666-4666-8666-666666666666"
+        response = await self.client.get(f"/api/v1/transfers/{OWN}/milestones", headers=headers())
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual([row["id"] for row in response.json()["data"]["milestones"]], [self.workflow_matter])
+        for clause in ("t.matter_id = m.id", "t.id = $1", "t.accountable_institution_id = $2",
+                       "m.accountable_institution_id = $2", "m.matter_type = 'transfer'"):
+            self.assertIn(clause, self.workflow_sql)
+        self.assertNotIn("source_record_id", self.workflow_sql)
+        self.assertTrue(all(call.args[0].lstrip().startswith("SELECT") for call in self.query.await_args_list))
+        self.tx.assert_not_awaited()
+
+    async def test_milestones_never_fallback_or_repair_invalid_canonical_links(self):
+        for link in (None, FOREIGN, "99999999-9999-4999-8999-999999999999", "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"):
+            self.workflow_matter = link
+            response = await self.client.get(f"/api/v1/transfers/{OWN}/milestones", headers=headers())
+            self.assertEqual(response.status_code, 409, response.text)
+            self.assertNotIn("data", response.json())
+        self.assertTrue(all(call.args[0].lstrip().startswith("SELECT") for call in self.query.await_args_list))
+        self.tx.assert_not_awaited()
+
+    async def test_milestone_read_denies_clients_and_missing_ability_before_queries(self):
+        for auth, status in (({}, 401), (headers(role=4), 404), (headers(abilities=[]), 403)):
+            response = await self.client.get(f"/api/v1/transfers/{OWN}/milestones", headers=auth)
+            self.assertEqual(response.status_code, status)
+        self.query.assert_not_awaited()
+
     async def query_fixture(self, text, params=None, **kwargs):
         params = params or []
+        if "AS workflow_matter_id" in text:
+            rows = [{"workflow_matter_id": self.workflow_matter}] if self.workflow_matter == "66666666-6666-4666-8666-666666666666" else []
+            return db.QueryResult(rows=rows, row_count=len(rows))
         if "FROM transfers t" in text:
             rows = getattr(self, "list_rows", [transfer_row(OWN, 5), transfer_row(FOREIGN, 7)])
             if "t.id = $1" in text:
@@ -122,6 +153,24 @@ class InstitutionBoundaryRouteTests(unittest.IsolatedAsyncioTestCase):
                 if pagination:
                     limit, offset = (params[int(index) - 1] for index in pagination.groups())
                     rows = rows[offset:offset + limit]
+            return db.QueryResult(rows=rows, row_count=len(rows))
+        if "FROM matter_milestones mm" in text:
+            self.workflow_sql = text
+            matters = [
+                ("66666666-6666-4666-8666-666666666666", FOREIGN, 5, "transfer"),
+                ("77777777-7777-4777-8777-777777777777", OWN, 5, "transfer"),
+                ("88888888-8888-4888-8888-888888888888", OWN, 5, "transfer"),
+                ("99999999-9999-4999-8999-999999999999", OWN, 7, "transfer"),
+                ("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", OWN, 5, "bond"),
+            ]
+            matched = [m for m in matters if (m[0] == self.workflow_matter if "t.matter_id = m.id" in text else m[1] == str(params[0]))]
+            if "m.accountable_institution_id" in text:
+                matched = [m for m in matched if m[2] == params[1]]
+            if "m.matter_type = 'transfer'" in text:
+                matched = [m for m in matched if m[3] == "transfer"]
+            rows = [dict(id=m[0], matter_id=m[0], definition_id=None, code=None, definition_name=None,
+                         name="Recorded milestone", status_label=None, status="not_started", sequence_number=1,
+                         due_date=None, completed_date=None, notes=None, created_at=None, updated_at=None) for m in matched]
             return db.QueryResult(rows=rows, row_count=len(rows))
         if "FROM transfer_parties" in text:
             if "SELECT 1" in text:

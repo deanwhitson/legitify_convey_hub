@@ -463,10 +463,20 @@ async def get_transfer_milestones(
     if not transfer:
         raise HTTPException(status_code=404, detail="Not found")
 
-    # The verified transfer-to-matter relationship is matters.source_record_id = transfers.id::text.
-    # transfers.matter_id is not populated in the prototype dataset.
-    # matters.source_record_id has no DB UNIQUE constraint, so callers also
-    # anchor to m.accountable_institution_id as defence in depth.
+    association = await query(
+        """SELECT m.id AS workflow_matter_id FROM transfers t
+           JOIN matters m ON m.id = t.matter_id
+           WHERE t.id = $1 AND t.accountable_institution_id = $2
+             AND m.accountable_institution_id = $2 AND m.matter_type = 'transfer'""",
+        [id, user.accountable_institution_id],
+    )
+    if len(association.rows) != 1:
+        raise HTTPException(status_code=409, detail="Workflow association unavailable")
+
+    # The canonical transfer-to-matter relationship is transfers.matter_id.
+    # Invalid associations fail explicitly; legacy links are not repaired.
+    # Recheck both owners in the read itself, independent of the earlier
+    # transfer authorization, and never fall back to source_record_id.
     milestones_sql = """
         SELECT mm.id, mm.matter_id, mm.definition_id, md.code,
                md.name AS definition_name, mm.name, mm.status_label, mm.status,
@@ -474,10 +484,13 @@ async def get_transfer_milestones(
                mm.created_at, mm.updated_at
         FROM matter_milestones mm
         JOIN matters m ON m.id = mm.matter_id
+        JOIN transfers t ON t.matter_id = m.id
         LEFT JOIN milestone_definitions md ON md.id = mm.definition_id
-        WHERE m.source_record_id = $1
+        WHERE t.id = $1
+          AND t.accountable_institution_id = $2
           AND m.accountable_institution_id = $2
-        ORDER BY mm.sequence_number
+          AND m.matter_type = 'transfer'
+        ORDER BY mm.sequence_number, mm.id
         """
     milestones_result = await query(milestones_sql, [id, user.accountable_institution_id])
     milestones = [_map_milestone(row) for row in milestones_result.rows]

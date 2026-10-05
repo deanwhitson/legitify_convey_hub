@@ -390,10 +390,22 @@ router.get(
       return
     }
 
-    // The verified transfer-to-matter relationship is matters.source_record_id = transfers.id::text.
-    // transfers.matter_id is not populated in the prototype dataset.
-    // matters.source_record_id has no DB UNIQUE constraint, so callers also
-    // anchor to m.accountable_institution_id as defence in depth.
+    const association = await query(
+      `SELECT m.id AS workflow_matter_id FROM transfers t
+       JOIN matters m ON m.id = t.matter_id
+       WHERE t.id = $1 AND t.accountable_institution_id = $2
+         AND m.accountable_institution_id = $2 AND m.matter_type = 'transfer'`,
+      [id, user.accountable_institution_id]
+    )
+    if (association.rows.length !== 1) {
+      res.status(409).json({ success: false, error: 'Workflow association unavailable' })
+      return
+    }
+
+    // The canonical transfer-to-matter relationship is transfers.matter_id.
+    // Invalid associations fail explicitly; legacy links are not repaired.
+    // Recheck both owners in the read itself, independent of the earlier
+    // transfer authorization, and never fall back to source_record_id.
     const milestonesQuery = `
       SELECT mm.id, mm.matter_id, mm.definition_id, md.code,
              md.name AS definition_name, mm.name, mm.status_label, mm.status,
@@ -401,10 +413,13 @@ router.get(
              mm.created_at, mm.updated_at
       FROM matter_milestones mm
       JOIN matters m ON m.id = mm.matter_id
+      JOIN transfers t ON t.matter_id = m.id
       LEFT JOIN milestone_definitions md ON md.id = mm.definition_id
-      WHERE m.source_record_id = $1
+      WHERE t.id = $1
+        AND t.accountable_institution_id = $2
         AND m.accountable_institution_id = $2
-      ORDER BY mm.sequence_number
+        AND m.matter_type = 'transfer'
+      ORDER BY mm.sequence_number, mm.id
     `
     const milestonesResult = await query(milestonesQuery, [id, user.accountable_institution_id])
 
@@ -442,14 +457,29 @@ router.get(
       return
     }
 
+    const association = await query(
+      `SELECT m.id AS workflow_matter_id FROM transfers t
+       JOIN matters m ON m.id = t.matter_id
+       WHERE t.id = $1 AND t.accountable_institution_id = $2
+         AND m.accountable_institution_id = $2 AND m.matter_type = 'transfer'`,
+      [id, user.accountable_institution_id]
+    )
+    if (association.rows.length !== 1) {
+      res.status(409).json({ success: false, error: 'Workflow association unavailable' })
+      return
+    }
+
     const activityResult = await query(
       `SELECT mh.id, mh.actor_name, mh.action, mh.change_summary, mh.created_at
        FROM milestone_history mh
        JOIN matter_milestones mm ON mm.id = mh.milestone_id
        JOIN matters m ON m.id = mm.matter_id
-       WHERE m.source_record_id = $1
+       JOIN transfers t ON t.matter_id = m.id
+       WHERE t.id = $1
+         AND t.accountable_institution_id = $2
          AND m.accountable_institution_id = $2
-       ORDER BY mh.created_at DESC
+         AND m.matter_type = 'transfer'
+       ORDER BY mh.created_at DESC, mh.id DESC
        LIMIT 100`,
       [id, user.accountable_institution_id]
     )

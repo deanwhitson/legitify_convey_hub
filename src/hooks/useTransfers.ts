@@ -11,13 +11,25 @@ export interface TransfersState {
   currentTransfer: TransferAggregate | null
   currentMilestones: Milestone[]
   activity: AuditEntry[]
+  isMilestonesLoading: boolean
+  milestonesError: string | null
+  isActivityLoading: boolean
+  activityError: string | null
   isLoading: boolean
   error: string | null
 }
 
 export const useTransfers = () => {
   const listRequest = useRef(0)
-  useEffect(() => () => { listRequest.current += 1 }, [])
+  const transferRequest = useRef(0)
+  const milestonesRequest = useRef(0)
+  const activityRequest = useRef(0)
+  useEffect(() => () => {
+    listRequest.current += 1
+    transferRequest.current += 1
+    milestonesRequest.current += 1
+    activityRequest.current += 1
+  }, [])
   const [state, setState] = useState<TransfersState>({
     transfers: [],
     statusTotals: null,
@@ -25,6 +37,10 @@ export const useTransfers = () => {
     currentTransfer: null,
     currentMilestones: [],
     activity: [],
+    isMilestonesLoading: true,
+    milestonesError: null,
+    isActivityLoading: true,
+    activityError: null,
     isLoading: false,
     error: null
   })
@@ -65,9 +81,11 @@ export const useTransfers = () => {
 
   // Fetch a single transfer aggregate
   const fetchTransfer = useCallback(async (id: string) => {
-    setLoading(true)
+    const request = ++transferRequest.current
+    setState(prev => ({ ...prev, currentTransfer: null, isLoading: true, error: null }))
     try {
       const response = await TransferApi.getTransfer(id)
+      if (request !== transferRequest.current) return null
       if (response.success && response.data) {
         setState(prev => ({
           ...prev,
@@ -81,10 +99,10 @@ export const useTransfers = () => {
         return null
       }
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'An unexpected error occurred')
+      if (request === transferRequest.current) setError(error instanceof Error ? error.message : 'An unexpected error occurred')
       return null
     }
-  }, [setLoading, setError])
+  }, [setError])
 
   // Create a new transfer from an aggregate workflow state
   const createTransfer = useCallback(async (data: Partial<TransferAggregate> | { property_address: string; purchase_price: number }) => {
@@ -164,47 +182,39 @@ export const useTransfers = () => {
 
   // Fetch milestones for a transfer
   const fetchMilestones = useCallback(async (id: string) => {
+    const request = ++milestonesRequest.current
+    setState(prev => ({ ...prev, currentMilestones: [], isMilestonesLoading: true, milestonesError: null }))
     try {
       const response = await TransferApi.getMilestones(id)
-      if (response.success && response.data) {
-        setState(prev => ({ ...prev, currentMilestones: response.data! }))
-      } else {
-        setError(response.error || 'Milestones are temporarily unavailable')
-      }
+      if (request !== milestonesRequest.current) return
+      if (!response.success || !response.data) throw new Error('Milestones are temporarily unavailable')
+      setState(prev => ({ ...prev, currentMilestones: response.data!, isMilestonesLoading: false, milestonesError: null }))
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Milestones are temporarily unavailable')
+      if (request === milestonesRequest.current) setState(prev => ({ ...prev, isMilestonesLoading: false,
+        milestonesError: error instanceof Error ? error.message : 'Milestones are temporarily unavailable' }))
     }
-  }, [setError])
+  }, [])
 
   // Update milestones for a transfer
-  const updateMilestones = useCallback(async (id: string, milestones: Milestone[]) => {
-    try {
-      const response = await TransferApi.updateMilestones(id, milestones)
-      if (response.success && response.data) {
-        setState(prev => ({ ...prev, currentMilestones: response.data! }))
-        return response.data
-      }
-      setError(response.error || 'Milestone changes could not be saved')
-      return null
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'Milestone changes could not be saved')
-      return null
-    }
-  }, [setError])
+  const updateMilestones = useCallback(async (_id: string, _milestones: Milestone[]) => {
+    setState(prev => ({ ...prev, milestonesError: 'Milestones are read-only; editing is unavailable.' }))
+    return null
+  }, [])
 
   // Fetch activity/audit trail for a transfer
   const fetchActivity = useCallback(async (id: string) => {
+    const request = ++activityRequest.current
+    setState(prev => ({ ...prev, activity: [], isActivityLoading: true, activityError: null }))
     try {
       const response = await TransferApi.getActivity(id)
-      if (response.success && response.data) {
-        setState(prev => ({ ...prev, activity: response.data! }))
-      } else {
-        setError(response.error || 'Transfer activity is temporarily unavailable')
-      }
+      if (request !== activityRequest.current) return
+      if (!response.success || !response.data) throw new Error('Transfer activity is temporarily unavailable')
+      setState(prev => ({ ...prev, activity: response.data!, isActivityLoading: false, activityError: null }))
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Transfer activity is temporarily unavailable')
+      if (request === activityRequest.current) setState(prev => ({ ...prev, isActivityLoading: false,
+        activityError: error instanceof Error ? error.message : 'Transfer activity is temporarily unavailable' }))
     }
-  }, [setError])
+  }, [])
 
   const clearError = useCallback(() => {
     setState(prev => ({ ...prev, error: null }))

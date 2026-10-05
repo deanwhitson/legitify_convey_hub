@@ -28,6 +28,9 @@ let server: Server
 let baseUrl: string
 let calls: Array<{ text: string; params: unknown[] }> = []
 let failQuery = false
+const CANONICAL_MATTER = '66666666-6666-4666-8666-666666666666'
+let workflowMatter: string | null | undefined
+let denyHistory = false
 let outbound: string[] = []
 const httpFetch = globalThis.fetch
 mock.method(globalThis, 'fetch', async (...[input, init]: Parameters<typeof httpFetch>) => {
@@ -70,6 +73,7 @@ function row(id: string, ai: number) {
     id, transfer_id: `TX-${ai}`, accountable_institution_id: ai,
     property_address: `Institution ${ai} address`, purchase_price: 100,
     status: 'in_progress', current_step: 1, total_steps: 5, progress: 0,
+    ...(workflowMatter !== undefined ? { matter_id: workflowMatter } : {}),
     created_at: '2026-01-01', updated_at: '2026-01-01',
   }
 }
@@ -78,6 +82,11 @@ async function fixtureQuery(text: string, params: unknown[] = []) {
   calls.push({ text, params })
   if (failQuery) throw new Error(MARKER)
   if (text === 'BEGIN' || text === 'COMMIT' || text === 'ROLLBACK') return { rows: [], rowCount: 0 }
+  if (text.includes('AS workflow_matter_id')) {
+    const valid = workflowMatter === undefined || workflowMatter === CANONICAL_MATTER
+    const rows = valid ? [{ workflow_matter_id: CANONICAL_MATTER }] : []
+    return { rows, rowCount: rows.length }
+  }
   if (text.includes('FROM transfers t')) {
     let rows = [row(OWN, 5), row(FOREIGN, 7)]
     if (text.includes('t.id = $1')) rows = rows.filter(item => item.id === params[0])
@@ -85,6 +94,22 @@ async function fixtureQuery(text: string, params: unknown[] = []) {
     if (scope) rows = rows.filter(item => item.accountable_institution_id === params[Number(scope[1]) - 1])
     if (text.includes('EXISTS')) rows = rows.filter(() => params[1] === GR)
     if (text.includes('COUNT(*)')) return { rows: [{ count: String(rows.length) }], rowCount: 1 }
+    return { rows, rowCount: rows.length }
+  }
+  if (text.includes('FROM matter_milestones mm') || text.includes('FROM milestone_history mh')) {
+    if (denyHistory && text.includes('FROM milestone_history')) throw Object.assign(new Error(MARKER), { code: '42501' })
+    const matters = [
+      { id: CANONICAL_MATTER, source: FOREIGN, ai: 5, type: 'transfer' },
+      { id: '77777777-7777-4777-8777-777777777777', source: OWN, ai: 5, type: 'transfer' },
+      { id: '88888888-8888-4888-8888-888888888888', source: OWN, ai: 5, type: 'transfer' },
+      { id: '99999999-9999-4999-8999-999999999999', source: OWN, ai: 7, type: 'transfer' },
+      { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', source: OWN, ai: 5, type: 'bond' },
+    ]
+    let matched = matters.filter(m => text.includes('t.matter_id = m.id') ? m.id === workflowMatter : m.source === params[0])
+    if (text.includes('m.accountable_institution_id')) matched = matched.filter(m => m.ai === params[1])
+    if (text.includes("m.matter_type = 'transfer'")) matched = matched.filter(m => m.type === 'transfer')
+    const rows = matched.map(m => ({ id: m.id, matter_id: m.id, name: 'Recorded milestone', status: 'not_started',
+      sequence_number: 1, actor_name: null, action: 'Recorded event', created_at: '2026-01-01T00:00:00Z' }))
     return { rows, rowCount: rows.length }
   }
   if (text.includes('FROM transfer_parties') && text.includes('SELECT 1')) {
@@ -145,6 +170,8 @@ beforeEach(() => {
   calls = []
   outbound = []
   failQuery = false
+  workflowMatter = undefined
+  denyHistory = false
   errorLog.mock.resetCalls()
   warningLog.mock.resetCalls()
 })
@@ -153,6 +180,59 @@ after(async () => {
   await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()))
   mock.restoreAll()
   await pool.end()
+})
+
+describe('canonical read-only workflow associations', () => {
+  for (const resource of ['milestones', 'activity']) {
+    it(`${resource} uses only the canonical matter despite mismatched and duplicate legacy sources`, async () => {
+      workflowMatter = CANONICAL_MATTER
+      const result = await request(`/api/v1/transfers/${OWN}/${resource}`, authorization())
+      assert.equal(result.status, 200)
+      assert.deepEqual(result.body.data[resource].map((item: { id: string }) => item.id), [CANONICAL_MATTER])
+      const read = calls.at(-1)!
+      assert.match(read.text, /t\.matter_id = m\.id/)
+      assert.match(read.text, /t\.id = \$1/)
+      assert.match(read.text, /t\.accountable_institution_id = \$2/)
+      assert.match(read.text, /m\.accountable_institution_id = \$2/)
+      assert.match(read.text, /m\.matter_type = 'transfer'/)
+      assert.doesNotMatch(read.text, /source_record_id/)
+      assert.ok(calls.every(call => /^\s*SELECT\b/.test(call.text)))
+    })
+
+    it(`${resource} never repairs or falls back for absent, foreign or wrong-type canonical links`, async () => {
+      for (const link of [null, FOREIGN, '99999999-9999-4999-8999-999999999999', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa']) {
+        workflowMatter = link
+        const result = await request(`/api/v1/transfers/${OWN}/${resource}`, authorization())
+        assert.equal(result.status, 409)
+        assert.ok(!result.body.data)
+      }
+      assert.ok(calls.every(call => /^\s*SELECT\b/.test(call.text)))
+    })
+
+    it(`${resource} preserves auth, staff ability and every-role tenant boundaries`, async () => {
+      assert.equal((await request(`/api/v1/transfers/${OWN}/${resource}`)).status, 401)
+      assert.equal((await request(`/api/v1/transfers/${OWN}/${resource}`, authorization({ user_roles_id: 4 }))).status, 404)
+      assert.equal((await request(`/api/v1/transfers/${OWN}/${resource}`, authorization({ abilities: [] }))).status, 403)
+      assert.equal(calls.length, 0)
+      for (const role of [1, 2, 3]) {
+        const denied = await request(`/api/v1/transfers/${FOREIGN}/${resource}`, authorization({ user_roles_id: role }))
+        assert.equal(denied.status, 404)
+      }
+      assert.ok(calls.every(call => !/FROM (matter_milestones|milestone_history)/.test(call.text)))
+    })
+  }
+
+  it('surfaces missing history permission rather than inventing empty activity or changing grants', async () => {
+    workflowMatter = CANONICAL_MATTER
+    denyHistory = true
+    const result = await request(`/api/v1/transfers/${OWN}/activity`, authorization())
+    assert.equal(result.status, 500)
+    assert.ok(!result.body.data)
+    assert.ok(!JSON.stringify(result.body).includes(MARKER))
+    const milestones = await request(`/api/v1/transfers/${OWN}/milestones`, authorization())
+    assert.equal(milestones.status, 200)
+    assert.ok(calls.every(call => /^\s*SELECT\b/.test(call.text)))
+  })
 })
 
 describe('Verified institution claims and policy', () => {

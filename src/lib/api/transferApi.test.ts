@@ -45,6 +45,33 @@ const CLASSIFICATION = {
   requiresTransferFrom: true,
 }
 
+describe('read-only milestone and activity API', () => {
+  it('keeps empty results distinct from malformed or failed reads', async () => {
+    for (const [field, read] of [
+      ['milestones', () => TransferApi.getMilestones(TRANSFER_ID)],
+      ['activity', () => TransferApi.getActivity(TRANSFER_ID)],
+    ] as const) {
+      const empty = respond({ message: 'OK', data: { [field]: [] } })
+      assert.deepEqual((await read()).data, [])
+      empty.mock.restore()
+      for (const data of [undefined, {}, { [field]: null }, { [field]: {} }]) {
+        const response = respond({ message: 'OK', data })
+        await assert.rejects(read, /Invalid .* response/)
+        response.mock.restore()
+      }
+      const failure = respond({ error: 'Unavailable' }, 503)
+      await assert.rejects(read, ApiRequestError)
+      failure.mock.restore()
+    }
+  })
+
+  it('refuses unsupported milestone writes without issuing a legacy request', async () => {
+    const fetchMock = respond({ success: true, data: [] })
+    await assert.rejects(TransferApi.updateMilestones(TRANSFER_ID, []), /read-only/i)
+    assert.equal(fetchMock.mock.callCount(), 0)
+  })
+})
+
 describe('canonical transfer classifications', () => {
   it('loads authenticated reference data without a hard-coded fallback', async () => {
     const fetchMock = respond({ message: 'OK', data: { classifications: [CLASSIFICATION] } })

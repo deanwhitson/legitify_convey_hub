@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, CheckCircle2, Clock, Circle, AlertCircle, Calendar, Building, User, ChevronDown, ChevronUp, History } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardContent, Modal, UnavailableNotice } from '@/components/ui'
@@ -13,51 +13,6 @@ import { ApiRequestError } from '@/lib/api/http'
 import { cn } from '@/utils/cn'
 
 export type MilestoneStatus = 'not_started' | 'in_progress' | 'completed' | 'overdue' | 'not_required'
-
-export interface Milestone {
-  id: string
-  name: string
-  statusLabel: string
-  status: MilestoneStatus
-  completedDate?: string
-  dueDate?: string
-  notes?: string
-}
-
-interface AuditEntry {
-  id: string
-  user: string
-  action: string
-  timestamp: string
-}
-
-const CURRENT_USER = 'John Doe'
-
-const INITIAL_MILESTONES: Milestone[] = [
-  { id: '1', name: 'Transferor', statusLabel: 'FICA Received', status: 'not_started' },
-  { id: '2', name: 'Transferee', statusLabel: 'FICA Received', status: 'not_started' },
-  { id: '3', name: 'Guarantees', statusLabel: 'Guarantee/s Due Date', status: 'not_started' },
-  { id: '4', name: 'Transfer Duty', statusLabel: 'Applied', status: 'not_started' },
-  { id: '5', name: 'Rates', statusLabel: 'Figures Requested', status: 'not_started' },
-  { id: '6', name: 'Levies', statusLabel: 'Figures Requested', status: 'not_started' },
-  { id: '7', name: 'Home Owners', statusLabel: 'Consent Requested', status: 'not_started' },
-  { id: '8', name: 'Electrical', statusLabel: 'Certificate Requested', status: 'not_started' },
-  { id: '9', name: 'Entomologist', statusLabel: 'Certificate Requested', status: 'not_started' },
-  { id: '10', name: 'Electric Fence', statusLabel: 'Certificate Received', status: 'not_started' },
-  { id: '11', name: 'Gas Conformity', statusLabel: 'Certificate Requested', status: 'not_started' },
-  { id: '12', name: 'Plumbing', statusLabel: 'Certificate Requested', status: 'not_started' },
-  { id: '13', name: 'Instruction', statusLabel: 'Instruction received', status: 'not_started' },
-  { id: '14', name: 'Deposit', statusLabel: 'Deposit Due', status: 'not_started' },
-  { id: '15', name: 'New Bond', statusLabel: 'Bond Grant Due', status: 'not_started' },
-  { id: '16', name: 'Subject to Sale', statusLabel: 'Due Date', status: 'not_started' },
-  { id: '17', name: "Suspensive Cond's", statusLabel: 'All Conditions met', status: 'not_started' },
-  { id: '18', name: 'Bond Cancellation', statusLabel: 'Figures Requested', status: 'not_started' },
-  { id: '19', name: 'Title Deed', statusLabel: 'Title Deed Requested', status: 'not_started' },
-  { id: '20', name: 'Transfer Costs', statusLabel: 'Proforma Sent', status: 'not_started' },
-  { id: '21', name: 'FICA', statusLabel: 'Certified', status: 'not_started' },
-  { id: '22', name: 'Pool', statusLabel: 'Certificate Requested', status: 'not_started' },
-  { id: '23', name: 'Transfer Registration Complete', statusLabel: '5 days after reg', status: 'not_started' }
-]
 
 interface PartyDetails {
   fullName: string
@@ -131,23 +86,29 @@ function mapAggregateToDetails(aggregate: TransferAggregate | null): TransferDet
 
 const TransferMilestones: React.FC = () => {
   const { transferId } = useParams<{ transferId: string }>()
+  return <TransferMilestonesContent key={transferId || 'missing'} />
+}
+
+const TransferMilestonesContent: React.FC = () => {
+  const { transferId } = useParams<{ transferId: string }>()
   const navigate = useNavigate()
   const resolvedTransferId = transferId || ''
 
   const {
     currentTransfer,
-    currentMilestones,
-    activity,
+    currentMilestones: milestones,
+    activity: auditEntries,
+    isMilestonesLoading,
+    milestonesError,
+    isActivityLoading,
+    activityError,
     isLoading,
     error,
     fetchTransfer,
     fetchMilestones,
-    updateMilestones,
     fetchActivity
   } = useTransfers()
 
-  const [milestones, setMilestones] = useState<Milestone[]>(INITIAL_MILESTONES)
-  const [auditEntries, setAuditEntries] = useState<AuditEntry[]>([])
   const [expandedMilestone, setExpandedMilestone] = useState<string | null>(null)
   const [isDetailsExpanded, setIsDetailsExpanded] = useState(false)
   const [transfer, setTransfer] = useState<TransferDetails>(() => emptyDetails(resolvedTransferId))
@@ -157,22 +118,13 @@ const TransferMilestones: React.FC = () => {
   const [coreConflict, setCoreConflict] = useState(false)
   const [isSavingCore, setIsSavingCore] = useState(false)
   const [activeTab, setActiveTab] = useState<'milestones' | 'documents' | 'accounts'>('milestones')
-  const noteValuesAtFocus = useRef(new Map<string, string>())
 
   // Load transfer, milestones and activity from the backend.
   useEffect(() => {
     if (!resolvedTransferId) return
-    let cancelled = false
-    const load = async () => {
-      await Promise.all([
-        fetchTransfer(resolvedTransferId),
-        fetchMilestones(resolvedTransferId),
-        fetchActivity(resolvedTransferId)
-      ])
-      if (cancelled) return
-    }
-    load()
-    return () => { cancelled = true }
+    void fetchTransfer(resolvedTransferId)
+    void fetchMilestones(resolvedTransferId)
+    void fetchActivity(resolvedTransferId)
   }, [resolvedTransferId, fetchTransfer, fetchMilestones, fetchActivity])
 
   // Load the editable core fields and concurrency tokens through the
@@ -206,50 +158,10 @@ const TransferMilestones: React.FC = () => {
     setTransfer(mapAggregateToDetails(currentTransfer))
   }, [currentTransfer])
 
-  useEffect(() => {
-    if (currentMilestones.length > 0) {
-      setMilestones(currentMilestones)
-    }
-  }, [currentMilestones])
-
-  useEffect(() => {
-    if (activity.length > 0) {
-      setAuditEntries(activity)
-    }
-  }, [activity])
-
-  const orderedMilestones = useMemo(() => {
-    const instruction = milestones.find(m => m.name === 'Instruction')
-    const rest = milestones.filter(m => m.name !== 'Instruction')
-    return instruction ? [instruction, ...rest] : milestones
-  }, [milestones])
-
-  const completedCount = orderedMilestones.filter(m => m.status === 'completed').length
-  const inProgressCount = orderedMilestones.filter(m => m.status === 'in_progress').length
-  const notRequiredCount = orderedMilestones.filter(m => m.status === 'not_required').length
-  const requiredMilestoneCount = orderedMilestones.length - notRequiredCount
-  const remainingCount = requiredMilestoneCount - completedCount - inProgressCount
-  const progress = requiredMilestoneCount > 0 ? Math.round((completedCount / requiredMilestoneCount) * 100) : 0
-
-  const addAuditEntry = (action: string) => {
-    setAuditEntries(prev => [
-      {
-        id: crypto.randomUUID(),
-        user: CURRENT_USER,
-        action,
-        timestamp: new Date().toISOString()
-      },
-      ...prev
-    ])
-  }
-
-  const persistMilestones = async (updatedMilestones: Milestone[]): Promise<boolean> => {
-    if (!resolvedTransferId) return false
-    const saved = await updateMilestones(resolvedTransferId, updatedMilestones)
-    if (!saved) return false
-    await fetchActivity(resolvedTransferId)
-    return true
-  }
+  const completedCount = milestones.filter(m => m.status === 'completed').length
+  const inProgressCount = milestones.filter(m => m.status === 'in_progress').length
+  const notRequiredCount = milestones.filter(m => m.status === 'not_required').length
+  const remainingCount = milestones.filter(m => m.status === 'not_started' || m.status === 'overdue').length
 
   const saveCoreDetails = async () => {
     if (!resolvedTransferId || !coreDetail?.matter) return
@@ -271,7 +183,6 @@ const TransferMilestones: React.FC = () => {
         firmReference: detail?.matter?.firmReference ?? '',
         propertyAddress: detail?.propertyAddress ?? ''
       })
-      addAuditEntry('Updated matter title, firm reference, or property address.')
       setIsDetailsExpanded(false)
     } catch (saveError) {
       if (saveError instanceof ApiRequestError && saveError.status === 409) {
@@ -283,70 +194,6 @@ const TransferMilestones: React.FC = () => {
       }
     } finally {
       setIsSavingCore(false)
-    }
-  }
-
-  const updateMilestoneStatus = async (id: string, newStatus: MilestoneStatus) => {
-    const milestone = milestones.find(item => item.id === id)
-    if (!milestone || milestone.status === newStatus) return
-
-    const updated = milestones.map(item =>
-      item.id === id
-        ? {
-            ...item,
-            status: newStatus,
-            completedDate: newStatus === 'completed' ? new Date().toISOString().split('T')[0] : item.completedDate
-          }
-        : item
-    )
-    setMilestones(updated)
-    const saved = await persistMilestones(updated)
-    if (saved) {
-      addAuditEntry(`Changed ${milestone.name} status from ${getStatusText(milestone.status)} to ${getStatusText(newStatus)}.`)
-    } else {
-      setMilestones(milestones)
-    }
-  }
-
-  const updateMilestoneNotes = (id: string, notes: string) => {
-    setMilestones(prev => prev.map(m =>
-      m.id === id ? { ...m, notes } : m
-    ))
-  }
-
-  const recordNotesUpdate = async (id: string, notes: string) => {
-    const previousNotes = noteValuesAtFocus.current.get(id) || ''
-    const milestone = milestones.find(item => item.id === id)
-    if (milestone && previousNotes !== notes) {
-      const saved = await persistMilestones(milestones.map(m => m.id === id ? { ...m, notes } : m))
-      if (saved) {
-        addAuditEntry(`${notes.trim() ? 'Updated' : 'Cleared'} notes for ${milestone.name}.`)
-      } else {
-        setMilestones(milestones)
-      }
-    }
-    noteValuesAtFocus.current.delete(id)
-  }
-
-  const toLocalDateValue = (value?: string) => {
-    if (!value) return ''
-    const date = new Date(value)
-    return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10)
-  }
-
-  const updateMilestoneDueDate = async (id: string, dueDate: string) => {
-    const milestone = milestones.find(item => item.id === id)
-    if (!milestone || (milestone.dueDate || '') === dueDate) return
-
-    const updated = milestones.map(m =>
-      m.id === id ? { ...m, dueDate } : m
-    )
-    setMilestones(updated)
-    const saved = await persistMilestones(updated)
-    if (saved) {
-      addAuditEntry(dueDate ? `Set the due date for ${milestone.name} to ${dueDate}.` : `Cleared the due date for ${milestone.name}.`)
-    } else {
-      setMilestones(milestones)
     }
   }
 
@@ -572,19 +419,25 @@ const TransferMilestones: React.FC = () => {
         </div>
 
         {activeTab === 'milestones' ? (
-          error ? (
-            <UnavailableNotice
-              message="Milestones are temporarily unavailable."
-              detail="Milestone progress and audit history cannot be loaded or saved right now, so no milestone changes are shown."
-            />
+          <>
+          <section aria-label="Recorded milestone overview">
+          {isMilestonesLoading ? (
+            <p role="status" className="mb-6">Loading recorded milestones...</p>
+          ) : milestonesError ? (
+            <div className="mb-6">
+              <UnavailableNotice message="Milestones are temporarily unavailable." detail="No milestone results are shown. This is not an empty or completed workflow." />
+              <Button variant="outline" onClick={() => { void fetchMilestones(resolvedTransferId) }}>Retry milestones</Button>
+            </div>
+          ) : milestones.length === 0 ? (
+            <p className="mb-6">No recorded milestones were returned. Workflow readiness has not been evaluated.</p>
           ) : (
           <>
             {/* Progress Overview */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-5 mb-6">
           <Card>
             <CardContent className="p-4 text-center">
-              <p className="text-2xl font-bold text-teal-600 dark:text-teal-400">{progress}%</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Overall Progress</p>
+              <p className="text-2xl font-bold text-teal-600 dark:text-teal-400">{milestones.length}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Recorded Milestones</p>
             </CardContent>
           </Card>
           <Card>
@@ -602,7 +455,7 @@ const TransferMilestones: React.FC = () => {
           <Card>
             <CardContent className="p-4 text-center">
               <p className="text-2xl font-bold text-gray-600 dark:text-gray-400">{remainingCount}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Remaining</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Not Started / Overdue</p>
             </CardContent>
           </Card>
           <Card>
@@ -613,19 +466,10 @@ const TransferMilestones: React.FC = () => {
           </Card>
         </div>
 
-        {/* Progress Bar */}
+        {/* Read-only progress context */}
         <Card className="mb-6">
           <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Progress Overview</span>
-              <span className="text-sm text-gray-600 dark:text-gray-400">{completedCount} of {requiredMilestoneCount} required milestones completed</span>
-            </div>
-            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
-              <div
-                className="bg-teal-600 h-3 rounded-full transition-all duration-500"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Read-only recorded states, not legal readiness or transfer completion. Milestone editing and workflow transitions are unavailable.</p>
           </CardContent>
         </Card>
 
@@ -638,27 +482,23 @@ const TransferMilestones: React.FC = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0 overflow-x-auto">
-            <table className="w-full text-left text-sm">
+            <table aria-label="Recorded milestones" className="w-full text-left text-sm">
               <thead className="bg-gray-50 dark:bg-navy-800 text-gray-500 dark:text-gray-400 uppercase text-xs tracking-wide">
                 <tr>
                   <th className="px-4 py-3 w-12">#</th>
                   <th className="px-4 py-3 w-[15%]">Milestone</th>
-                  <th className="px-4 py-3">Requirement</th>
+                  <th className="px-4 py-3">Recorded Label</th>
                   <th className="px-4 py-3">Description</th>
                   <th className="px-4 py-3 w-[12%]">Status</th>
                   <th className="px-4 py-3 w-[15%]">Due Date</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-navy-700">
-                {orderedMilestones.map((milestone, index) => (
-                  <tr
-                    key={milestone.id}
-                    onClick={() => setExpandedMilestone(milestone.id)}
-                    className="hover:bg-gray-50 dark:hover:bg-navy-800/50 transition-colors cursor-pointer"
-                  >
+                {milestones.map((milestone, index) => (
+                  <tr key={milestone.id} className="hover:bg-gray-50 dark:hover:bg-navy-800/50 transition-colors">
                     <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">{index + 1}</td>
                     <td className="px-4 py-3 w-[15%]">
-                      <p className="font-medium text-gray-900 dark:text-gray-100">{milestone.name}</p>
+                      <button type="button" onClick={() => setExpandedMilestone(milestone.id)} className="font-medium text-teal-700 dark:text-teal-300 underline">{milestone.name}</button>
                     </td>
                     <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{milestone.statusLabel}</td>
                     <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
@@ -688,45 +528,39 @@ const TransferMilestones: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Modal isOpen={!!selectedMilestone} onClose={() => setExpandedMilestone(null)} title={selectedMilestone ? `Edit ${selectedMilestone.name}` : ''} description={selectedMilestone?.statusLabel} size="md">
+        <Modal isOpen={!!selectedMilestone} onClose={() => setExpandedMilestone(null)} title={selectedMilestone?.name || ''} description="Read-only milestone record" size="md">
           {selectedMilestone && (
             <div className="space-y-4">
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">Status</label>
-                  <select value={selectedMilestone.status} onChange={(event) => updateMilestoneStatus(selectedMilestone.id, event.target.value as MilestoneStatus)} className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 transition-all duration-200 focus:border-teal-500 focus:ring-2 focus:ring-teal-500 dark:border-navy-600 dark:bg-navy-700 dark:text-gray-100">
-                    <option value="not_started">Not Started</option>
-                    <option value="in_progress">In Progress</option>
-                    <option value="completed">Completed</option>
-                    <option value="overdue">Overdue</option>
-                    <option value="not_required">Not Required</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">Due Date</label>
-                  <input type="date" value={toLocalDateValue(selectedMilestone.dueDate)} onChange={(event) => updateMilestoneDueDate(selectedMilestone.id, event.target.value)} className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 transition-all duration-200 focus:border-teal-500 focus:ring-2 focus:ring-teal-500 dark:border-navy-600 dark:bg-navy-700 dark:text-gray-100" />
-                </div>
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">Description</label>
-                <textarea value={selectedMilestone.notes || ''} onChange={(event) => updateMilestoneNotes(selectedMilestone.id, event.target.value)} onFocus={(event) => noteValuesAtFocus.current.set(selectedMilestone.id, event.currentTarget.value)} onBlur={(event) => recordNotesUpdate(selectedMilestone.id, event.currentTarget.value)} placeholder="Add notes for this milestone..." rows={4} className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 transition-all duration-200 focus:border-teal-500 focus:ring-2 focus:ring-teal-500 dark:border-navy-600 dark:bg-navy-700 dark:text-gray-100" />
-              </div>
-              {selectedMilestone.completedDate && <p className="text-xs text-green-600 dark:text-green-400">Completed on {selectedMilestone.completedDate}</p>}
-              <div className="flex justify-end"><Button onClick={() => setExpandedMilestone(null)}>Done</Button></div>
+              <p>Recorded status: {getStatusText(selectedMilestone.status)}</p>
+              <p>Recorded label: {selectedMilestone.statusLabel || '—'}</p>
+              <p>Due date: {selectedMilestone.dueDate || 'Not recorded'}</p>
+              <p className="whitespace-pre-wrap">{selectedMilestone.notes || 'No description recorded.'}</p>
+              {selectedMilestone.completedDate && <p>Recorded completion date: {selectedMilestone.completedDate}</p>}
+              <div className="flex justify-end"><Button onClick={() => setExpandedMilestone(null)}>Close</Button></div>
             </div>
           )}
         </Modal>
+          </>
+          )}
+          </section>
 
-        <Card>
+        <Card role="region" aria-label="Recorded activity">
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <History className="h-5 w-5 text-teal-600 dark:text-teal-400" />
-              <span>Audit Trail</span>
+              <span>Recorded Activity</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {auditEntries.length === 0 ? (
-              <p className="text-sm text-gray-500 dark:text-gray-400">No milestone updates have been recorded yet.</p>
+            {isActivityLoading ? (
+              <p role="status">Loading recorded activity...</p>
+            ) : activityError ? (
+              <>
+                <UnavailableNotice message="Activity is temporarily unavailable." detail="Activity may be unavailable under the current permissions or service configuration. Milestone availability is independent; no local audit events are substituted." />
+                <Button variant="outline" onClick={() => { void fetchActivity(resolvedTransferId) }}>Retry activity</Button>
+              </>
+            ) : auditEntries.length === 0 ? (
+              <p className="text-sm text-gray-500 dark:text-gray-400">No recorded activity was returned.</p>
             ) : (
               <div className="space-y-4">
                 {auditEntries.map((entry) => (
@@ -736,7 +570,7 @@ const TransferMilestones: React.FC = () => {
                         <User className="h-4 w-4" />
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{entry.user}</p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{entry.user || 'Actor not recorded'}</p>
                         <p className="text-sm text-gray-600 dark:text-gray-400">{entry.action}</p>
                       </div>
                     </div>
@@ -750,7 +584,6 @@ const TransferMilestones: React.FC = () => {
           </CardContent>
         </Card>
           </>
-          )
         ) : activeTab === 'documents' ? (
           <TransferDocumentsPanel transferId={resolvedTransferId} />
         ) : (

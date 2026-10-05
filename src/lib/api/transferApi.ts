@@ -23,7 +23,7 @@ export interface Milestone {
 
 export interface AuditEntry {
   id: string
-  user: string
+  user: string | null
   action: string
   timestamp: string
 }
@@ -369,16 +369,27 @@ export class TransferApi {
 
   static async getMilestones(id: string): Promise<ApiResponse<Milestone[]>> {
     const envelope = await apiRequest<{ message?: string; data?: { milestones?: Milestone[] } }>(`/api/v1/transfers/${id}/milestones`)
-    return { success: true, message: envelope.message, data: envelope.data?.milestones ?? [] }
+    const rows = envelope.data?.milestones
+    if (!Array.isArray(rows) || rows.some(row => !row || typeof row.id !== 'string' || !row.id
+      || typeof row.name !== 'string' || !['not_started', 'in_progress', 'completed', 'overdue', 'not_required'].includes(row.status))) {
+      throw new Error('Invalid milestones response')
+    }
+    return { success: true, message: envelope.message, data: rows }
   }
 
-  static async updateMilestones(id: string, milestones: Milestone[]): Promise<ApiResponse<Milestone[]>> {
-    return apiRequest(`/api/transfers/${id}/milestones`, { method: 'PUT', body: milestones })
+  static async updateMilestones(_id: string, _milestones: Milestone[]): Promise<ApiResponse<Milestone[]>> {
+    throw new Error('Milestones are read-only; editing is unavailable.')
   }
 
   static async getActivity(id: string): Promise<ApiResponse<AuditEntry[]>> {
     const envelope = await apiRequest<{ message?: string; data?: { activity?: AuditEntry[] } }>(`/api/v1/transfers/${id}/activity`)
-    return { success: true, message: envelope.message, data: envelope.data?.activity ?? [] }
+    const rows = envelope.data?.activity
+    if (!Array.isArray(rows) || rows.some(row => !row || typeof row.id !== 'string' || !row.id
+      || (row.user != null && typeof row.user !== 'string') || typeof row.action !== 'string'
+      || typeof row.timestamp !== 'string' || !Number.isFinite(Date.parse(row.timestamp)))) {
+      throw new Error('Invalid activity response')
+    }
+    return { success: true, message: envelope.message, data: rows }
   }
 
   // ---- Authenticated v1 matter + party lane (BFF → FastAPI) ----
