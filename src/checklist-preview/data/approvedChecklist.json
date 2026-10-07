@@ -1,0 +1,4733 @@
+{
+  "sourceWorkbookSha256": "C543935844CFD9AD20CDEC05EE539B3057834FF4D17006E033BBA20C8E5A107E",
+  "approvalsDate": "2026-10-06",
+  "approver": "Dean",
+  "classifications": [
+    "transfer.private_treaty.not_applicable",
+    "transfer.private_treaty.sectional_title_register",
+    "transfer.private_treaty.township_register",
+    "transfer.private_treaty.extension_of_scheme",
+    "transfer.private_treaty.subdivision",
+    "transfer.private_treaty.bulk_transfer",
+    "transfer.auction",
+    "transfer.sale_in_execution",
+    "transfer.property_in_possession",
+    "transfer.deceased_estate_inheritance",
+    "transfer.endorsement_section_45",
+    "transfer.donation"
+  ],
+  "groups": [
+    {
+      "name": "Identity and FICA",
+      "documentIds": [
+        "DOC-001",
+        "DOC-033",
+        "DOC-002",
+        "DOC-011",
+        "DOC-012",
+        "DOC-013",
+        "DOC-014",
+        "DOC-015",
+        "DOC-016"
+      ],
+      "displayNote": "Show the current level within each group; do not infer a statutory mandate.",
+      "stageNote": "Show applicability trigger and due stage from the current decision record.",
+      "evidenceNote": "Show received vs accepted evidence separately; upload alone is not acceptance.",
+      "viewsNote": "Outstanding-item counts; filters by level and stage. One underlying record across groups."
+    },
+    {
+      "name": "Marriage and consent",
+      "documentIds": [
+        "DOC-004",
+        "DOC-005",
+        "DOC-006",
+        "DOC-007",
+        "DOC-034"
+      ],
+      "displayNote": "Show the current level within each group; do not infer a statutory mandate.",
+      "stageNote": "Show applicability trigger and due stage from the current decision record.",
+      "evidenceNote": "Show received vs accepted evidence separately; upload alone is not acceptance.",
+      "viewsNote": "Outstanding-item counts; filters by level and stage. One underlying record across groups."
+    },
+    {
+      "name": "Sale and finance",
+      "documentIds": [
+        "DOC-017",
+        "DOC-018",
+        "DOC-022",
+        "DOC-049",
+        "DOC-050",
+        "DOC-051",
+        "DOC-052",
+        "DOC-079",
+        "DOC-081"
+      ],
+      "displayNote": "Show the current level within each group; do not infer a statutory mandate.",
+      "stageNote": "Show applicability trigger and due stage from the current decision record.",
+      "evidenceNote": "Show received vs accepted evidence separately; upload alone is not acceptance.",
+      "viewsNote": "Outstanding-item counts; filters by level and stage. One underlying record across groups."
+    },
+    {
+      "name": "Estate and inheritance",
+      "documentIds": [
+        "DOC-008",
+        "DOC-023",
+        "DOC-024",
+        "DOC-025",
+        "DOC-026",
+        "DOC-027",
+        "DOC-071",
+        "DOC-073",
+        "DOC-074",
+        "DOC-061",
+        "DOC-062"
+      ],
+      "displayNote": "Show the current level within each group; do not infer a statutory mandate.",
+      "stageNote": "Show applicability trigger and due stage from the current decision record.",
+      "evidenceNote": "Show received vs accepted evidence separately; upload alone is not acceptance.",
+      "viewsNote": "Outstanding-item counts; filters by level and stage. One underlying record across groups."
+    },
+    {
+      "name": "Clearances and compliance",
+      "documentIds": [
+        "DOC-019",
+        "DOC-020",
+        "DOC-044",
+        "DOC-045",
+        "DOC-046",
+        "DOC-047",
+        "DOC-055",
+        "DOC-056",
+        "DOC-057",
+        "DOC-058",
+        "DOC-059",
+        "PROV-LEVY-CERT"
+      ],
+      "displayNote": "Show the current level within each group; do not infer a statutory mandate.",
+      "stageNote": "Show applicability trigger and due stage from the current decision record.",
+      "evidenceNote": "Show received vs accepted evidence separately; upload alone is not acceptance.",
+      "viewsNote": "Outstanding-item counts; filters by level and stage. One underlying record across groups."
+    },
+    {
+      "name": "Tax and payments",
+      "documentIds": [
+        "DOC-003",
+        "DOC-009",
+        "DOC-010",
+        "DOC-036",
+        "DOC-048",
+        "DOC-041",
+        "DOC-042",
+        "DOC-060",
+        "DOC-072",
+        "DOC-083"
+      ],
+      "displayNote": "Show the current level within each group; do not infer a statutory mandate.",
+      "stageNote": "Show applicability trigger and due stage from the current decision record.",
+      "evidenceNote": "Show received vs accepted evidence separately; upload alone is not acceptance.",
+      "viewsNote": "Outstanding-item counts; filters by level and stage. One underlying record across groups."
+    },
+    {
+      "name": "Property and transfer",
+      "documentIds": [
+        "DOC-021",
+        "DOC-030",
+        "DOC-031",
+        "DOC-032",
+        "DOC-035",
+        "DOC-037",
+        "DOC-038",
+        "DOC-040",
+        "DOC-053",
+        "DOC-054",
+        "DOC-063"
+      ],
+      "displayNote": "Show the current level within each group; do not infer a statutory mandate.",
+      "stageNote": "Show applicability trigger and due stage from the current decision record.",
+      "evidenceNote": "Show received vs accepted evidence separately; upload alone is not acceptance.",
+      "viewsNote": "Outstanding-item counts; filters by level and stage. One underlying record across groups."
+    },
+    {
+      "name": "Development related",
+      "documentIds": [
+        "DOC-064",
+        "DOC-065",
+        "DOC-066",
+        "DOC-069",
+        "DOC-070",
+        "DOC-075",
+        "DOC-078",
+        "DOC-080"
+      ],
+      "displayNote": "Show the current level within each group; do not infer a statutory mandate.",
+      "stageNote": "Show applicability trigger and due stage from the current decision record.",
+      "evidenceNote": "Show received vs accepted evidence separately; upload alone is not acceptance.",
+      "viewsNote": "Outstanding-item counts; filters by level and stage. One underlying record across groups."
+    },
+    {
+      "name": "Auction and execution",
+      "documentIds": [
+        "DOC-028",
+        "DOC-029",
+        "DOC-084"
+      ],
+      "displayNote": "Show the current level within each group; do not infer a statutory mandate.",
+      "stageNote": "Show applicability trigger and due stage from the current decision record.",
+      "evidenceNote": "Show received vs accepted evidence separately; upload alone is not acceptance.",
+      "viewsNote": "Outstanding-item counts; filters by level and stage. One underlying record across groups."
+    },
+    {
+      "name": "Bulk transfer and registration",
+      "documentIds": [
+        "DOC-085",
+        "DOC-082",
+        "DOC-043"
+      ],
+      "displayNote": "Show the current level within each group; do not infer a statutory mandate.",
+      "stageNote": "Show applicability trigger and due stage from the current decision record.",
+      "evidenceNote": "Show received vs accepted evidence separately; upload alone is not acceptance.",
+      "viewsNote": "Outstanding-item counts; filters by level and stage. One underlying record across groups."
+    }
+  ],
+  "documents": [
+    {
+      "id": "DOC-001",
+      "name": "Identity document / passport",
+      "purposeGroup": "Identity and FICA",
+      "applicabilityRoute": "Existing Legitify Golden Records client: reuse/link suitable identity/FICA information and evidence, review currency, completeness and sufficiency, and collect only missing/outdated items. Direct DEEDLY-created client: capture information and collect evidence during onboarding.",
+      "timing": "Before approving party identity/capacity.",
+      "reviewLimits": "RMCP defines acceptable evidence, verification and coverage of parties/representatives. Reuse is not automatic acceptance; no new runtime/Golden Records creation capability is authorised.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "required"
+        },
+        "transfer.auction": {
+          "kind": "required"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "required"
+        },
+        "transfer.property_in_possession": {
+          "kind": "required"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "required"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "required"
+        },
+        "transfer.donation": {
+          "kind": "required"
+        }
+      }
+    },
+    {
+      "id": "DOC-002",
+      "name": "Residential address evidence",
+      "purposeGroup": "Identity and FICA",
+      "applicabilityRoute": "Address evidence when the RMCP calls for address verification or enhanced evidence.",
+      "timing": "Onboarding.",
+      "reviewLimits": "Evidence types and age are determined by the RMCP; verification remains outstanding.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "conditional"
+        },
+        "transfer.auction": {
+          "kind": "conditional"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "conditional"
+        },
+        "transfer.property_in_possession": {
+          "kind": "conditional"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "conditional"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "conditional"
+        },
+        "transfer.donation": {
+          "kind": "conditional"
+        }
+      }
+    },
+    {
+      "id": "DOC-003",
+      "name": "Income tax registration evidence",
+      "purposeGroup": "Tax and payments",
+      "applicabilityRoute": "Capture the required tax reference; request separate proof only where needed.",
+      "timing": "Before TDC01.",
+      "reviewLimits": "The stated R2m threshold is not verified and remains an outstanding verification item.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "conditional"
+        },
+        "transfer.auction": {
+          "kind": "conditional"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "conditional"
+        },
+        "transfer.property_in_possession": {
+          "kind": "conditional"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "conditional"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "conditional"
+        },
+        "transfer.donation": {
+          "kind": "conditional"
+        }
+      }
+    },
+    {
+      "id": "DOC-004",
+      "name": "Marriage certificate",
+      "purposeGroup": "Marriage and consent",
+      "applicabilityRoute": "Marriage affects capacity, ownership or endorsement.",
+      "timing": "Before capacity approval/signing.",
+      "reviewLimits": "Validate detailed matrimonial evidence.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "conditional"
+        },
+        "transfer.auction": {
+          "kind": "conditional"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "conditional"
+        },
+        "transfer.property_in_possession": {
+          "kind": "conditional"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "conditional"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "conditional"
+        },
+        "transfer.donation": {
+          "kind": "conditional"
+        }
+      }
+    },
+    {
+      "id": "DOC-005",
+      "name": "Antenuptial contract",
+      "purposeGroup": "Marriage and consent",
+      "applicabilityRoute": "ANC establishes the property regime.",
+      "timing": "Before capacity approval/signing.",
+      "reviewLimits": "Confirm marital law and registration.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "conditional"
+        },
+        "transfer.auction": {
+          "kind": "conditional"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "conditional"
+        },
+        "transfer.property_in_possession": {
+          "kind": "conditional"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "conditional"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "conditional"
+        },
+        "transfer.donation": {
+          "kind": "conditional"
+        }
+      }
+    },
+    {
+      "id": "DOC-006",
+      "name": "Divorce order",
+      "purposeGroup": "Marriage and consent",
+      "applicabilityRoute": "Divorce is the basis of entitlement or affects capacity.",
+      "timing": "Before entitlement approval/tax.",
+      "reviewLimits": "Review matter facts and applicable execution.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "conditional"
+        },
+        "transfer.auction": {
+          "kind": "conditional"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "conditional"
+        },
+        "transfer.property_in_possession": {
+          "kind": "conditional"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "conditional"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "conditional"
+        },
+        "transfer.donation": {
+          "kind": "conditional"
+        }
+      }
+    },
+    {
+      "id": "DOC-007",
+      "name": "Divorce settlement agreement",
+      "purposeGroup": "Marriage and consent",
+      "applicabilityRoute": "Settlement allocates the property.",
+      "timing": "Before entitlement approval/tax.",
+      "reviewLimits": "Review matter facts and applicable execution.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "conditional"
+        },
+        "transfer.auction": {
+          "kind": "conditional"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "conditional"
+        },
+        "transfer.property_in_possession": {
+          "kind": "conditional"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "conditional"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "conditional"
+        },
+        "transfer.donation": {
+          "kind": "conditional"
+        }
+      }
+    },
+    {
+      "id": "DOC-008",
+      "name": "Death certificate",
+      "purposeGroup": "Estate and inheritance",
+      "applicabilityRoute": "Death affects the matter or survivor entitlement.",
+      "timing": "Onboarding/estate authority review.",
+      "reviewLimits": "Review facts and applicable execution.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "conditional"
+        },
+        "transfer.auction": {
+          "kind": "conditional"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "conditional"
+        },
+        "transfer.property_in_possession": {
+          "kind": "conditional"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "required"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "required"
+        },
+        "transfer.donation": {
+          "kind": "conditional"
+        }
+      }
+    },
+    {
+      "id": "DOC-009",
+      "name": "Bank account confirmation",
+      "purposeGroup": "Tax and payments",
+      "applicabilityRoute": "Payout or refund is to an account.",
+      "timing": "Before payout/refund.",
+      "reviewLimits": "Review account facts and evidence.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "conditional"
+        },
+        "transfer.auction": {
+          "kind": "conditional"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "conditional"
+        },
+        "transfer.property_in_possession": {
+          "kind": "conditional"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "conditional"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "conditional"
+        },
+        "transfer.donation": {
+          "kind": "conditional"
+        }
+      }
+    },
+    {
+      "id": "DOC-010",
+      "name": "Source of funds evidence",
+      "purposeGroup": "Tax and payments",
+      "applicabilityRoute": "RMCP requires source-of-funds corroboration.",
+      "timing": "CDD/before accepting relevant funds.",
+      "reviewLimits": "Compliance officer approves detailed triggers and evidence.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "conditional"
+        },
+        "transfer.auction": {
+          "kind": "conditional"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "conditional"
+        },
+        "transfer.property_in_possession": {
+          "kind": "conditional"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "conditional"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "conditional"
+        },
+        "transfer.donation": {
+          "kind": "conditional"
+        }
+      }
+    },
+    {
+      "id": "DOC-011",
+      "name": "Company / close corporation registration documents",
+      "purposeGroup": "Identity and FICA",
+      "applicabilityRoute": "A company or close corporation is a relevant party.",
+      "timing": "Onboarding/before authority approval.",
+      "reviewLimits": "Validate exact requirements; foreign entities are a separate review.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "conditional"
+        },
+        "transfer.auction": {
+          "kind": "conditional"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "conditional"
+        },
+        "transfer.property_in_possession": {
+          "kind": "conditional"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "conditional"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "conditional"
+        },
+        "transfer.donation": {
+          "kind": "conditional"
+        }
+      }
+    },
+    {
+      "id": "DOC-012",
+      "name": "Trust deed and amendments",
+      "purposeGroup": "Identity and FICA",
+      "applicabilityRoute": "A trust is a relevant party.",
+      "timing": "Onboarding/before signing.",
+      "reviewLimits": "Trust-law review is required before any automated approval.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "conditional"
+        },
+        "transfer.auction": {
+          "kind": "conditional"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "conditional"
+        },
+        "transfer.property_in_possession": {
+          "kind": "conditional"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "conditional"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "conditional"
+        },
+        "transfer.donation": {
+          "kind": "conditional"
+        }
+      }
+    },
+    {
+      "id": "DOC-013",
+      "name": "Trustee letters of authority",
+      "purposeGroup": "Identity and FICA",
+      "applicabilityRoute": "Trustees act for a trust.",
+      "timing": "Before the trust acts/signs.",
+      "reviewLimits": "Attorney confirms authority and timing.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "conditional"
+        },
+        "transfer.auction": {
+          "kind": "conditional"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "conditional"
+        },
+        "transfer.property_in_possession": {
+          "kind": "conditional"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "conditional"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "conditional"
+        },
+        "transfer.donation": {
+          "kind": "conditional"
+        }
+      }
+    },
+    {
+      "id": "DOC-014",
+      "name": "Beneficial ownership / control evidence",
+      "purposeGroup": "Identity and FICA",
+      "applicabilityRoute": "Ownership/control verification is needed for an entity or trust.",
+      "timing": "Before CDD approval.",
+      "reviewLimits": "Detailed rules require compliance-officer approval.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "conditional"
+        },
+        "transfer.auction": {
+          "kind": "conditional"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "conditional"
+        },
+        "transfer.property_in_possession": {
+          "kind": "conditional"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "conditional"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "conditional"
+        },
+        "transfer.donation": {
+          "kind": "conditional"
+        }
+      }
+    },
+    {
+      "id": "DOC-015",
+      "name": "Entity resolution / authority to transact",
+      "purposeGroup": "Identity and FICA",
+      "applicabilityRoute": "Entity/trust authorised signatories act.",
+      "timing": "Before a representative signs.",
+      "reviewLimits": "Review decision body, quorum, statutory and transaction authority.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "conditional"
+        },
+        "transfer.auction": {
+          "kind": "conditional"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "conditional"
+        },
+        "transfer.property_in_possession": {
+          "kind": "conditional"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "conditional"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "conditional"
+        },
+        "transfer.donation": {
+          "kind": "conditional"
+        }
+      }
+    },
+    {
+      "id": "DOC-016",
+      "name": "Existing representative power of attorney",
+      "purposeGroup": "Identity and FICA",
+      "applicabilityRoute": "Someone signs on behalf of a party.",
+      "timing": "Before the agent signs.",
+      "reviewLimits": "No automatic retrospective curing; review authority and execution.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "conditional"
+        },
+        "transfer.auction": {
+          "kind": "conditional"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "conditional"
+        },
+        "transfer.property_in_possession": {
+          "kind": "conditional"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "conditional"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "conditional"
+        },
+        "transfer.donation": {
+          "kind": "conditional"
+        }
+      }
+    },
+    {
+      "id": "DOC-017",
+      "name": "Signed offer to purchase / sale agreement",
+      "purposeGroup": "Sale and finance",
+      "applicabilityRoute": "Private sale, PIP resale or an estate-sale route applies.",
+      "timing": "Instruction/before substantive processing.",
+      "reviewLimits": "Review conditions, amendments and signature authority. Estate-sale wording does not expand P0 scope.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "required"
+        },
+        "transfer.auction": {
+          "kind": "conditional"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "conditional"
+        },
+        "transfer.property_in_possession": {
+          "kind": "required"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "not_applicable"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "not_applicable"
+        },
+        "transfer.donation": {
+          "kind": "not_applicable"
+        }
+      }
+    },
+    {
+      "id": "DOC-018",
+      "name": "Signed addendum / extension agreement",
+      "purposeGroup": "Sale and finance",
+      "applicabilityRoute": "Terms or a deadline change.",
+      "timing": "Before relying on the change.",
+      "reviewLimits": "Review facts and execution.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "conditional"
+        },
+        "transfer.auction": {
+          "kind": "conditional"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "conditional"
+        },
+        "transfer.property_in_possession": {
+          "kind": "conditional"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "conditional"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "conditional"
+        },
+        "transfer.donation": {
+          "kind": "conditional"
+        }
+      }
+    },
+    {
+      "id": "DOC-019",
+      "name": "Municipal account",
+      "purposeGroup": "Clearances and compliance",
+      "applicabilityRoute": "Municipal account details are needed for clearance figures.",
+      "timing": "Before requesting clearance.",
+      "reviewLimits": "Review facts and execution.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "conditional"
+        },
+        "transfer.auction": {
+          "kind": "conditional"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "conditional"
+        },
+        "transfer.property_in_possession": {
+          "kind": "conditional"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "conditional"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "conditional"
+        },
+        "transfer.donation": {
+          "kind": "conditional"
+        }
+      }
+    },
+    {
+      "id": "DOC-020",
+      "name": "Levy account / managing agent details",
+      "purposeGroup": "Clearances and compliance",
+      "applicabilityRoute": "Required for Sectional Title; Conditional for Freehold where levy administration applies.",
+      "timing": "Before levy clearance request.",
+      "reviewLimits": "Review levy administration and evidence. This tenure rule does not promote DOC-070.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "tenure_split",
+          "sectional": "required",
+          "freehold": "conditional",
+          "raw": "Required if Sectional Title; Conditional if Freehold and applicable"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "tenure_split",
+          "sectional": "required",
+          "freehold": "conditional",
+          "raw": "Required if Sectional Title; Conditional if Freehold and applicable"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "tenure_split",
+          "sectional": "required",
+          "freehold": "conditional",
+          "raw": "Required if Sectional Title; Conditional if Freehold and applicable"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "tenure_split",
+          "sectional": "required",
+          "freehold": "conditional",
+          "raw": "Required if Sectional Title; Conditional if Freehold and applicable"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "tenure_split",
+          "sectional": "required",
+          "freehold": "conditional",
+          "raw": "Required if Sectional Title; Conditional if Freehold and applicable"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "tenure_split",
+          "sectional": "required",
+          "freehold": "conditional",
+          "raw": "Required if Sectional Title; Conditional if Freehold and applicable"
+        },
+        "transfer.auction": {
+          "kind": "tenure_split",
+          "sectional": "required",
+          "freehold": "conditional",
+          "raw": "Required if Sectional Title; Conditional if Freehold and applicable"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "tenure_split",
+          "sectional": "required",
+          "freehold": "conditional",
+          "raw": "Required if Sectional Title; Conditional if Freehold and applicable"
+        },
+        "transfer.property_in_possession": {
+          "kind": "tenure_split",
+          "sectional": "required",
+          "freehold": "conditional",
+          "raw": "Required if Sectional Title; Conditional if Freehold and applicable"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "tenure_split",
+          "sectional": "required",
+          "freehold": "conditional",
+          "raw": "Required if Sectional Title; Conditional if Freehold and applicable"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "tenure_split",
+          "sectional": "required",
+          "freehold": "conditional",
+          "raw": "Required if Sectional Title; Conditional if Freehold and applicable"
+        },
+        "transfer.donation": {
+          "kind": "tenure_split",
+          "sectional": "required",
+          "freehold": "conditional",
+          "raw": "Required if Sectional Title; Conditional if Freehold and applicable"
+        }
+      }
+    },
+    {
+      "id": "DOC-021",
+      "name": "Lease agreement",
+      "purposeGroup": "Property and transfer",
+      "applicabilityRoute": "Property is leased or SARS needs lease evidence.",
+      "timing": "Title/occupation review and before tax.",
+      "reviewLimits": "The conflicting SARS lease-count threshold remains unverified; do not silently select a threshold.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "conditional"
+        },
+        "transfer.auction": {
+          "kind": "conditional"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "conditional"
+        },
+        "transfer.property_in_possession": {
+          "kind": "conditional"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "conditional"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "conditional"
+        },
+        "transfer.donation": {
+          "kind": "conditional"
+        }
+      }
+    },
+    {
+      "id": "DOC-022",
+      "name": "Deposit / purchase price payment proof",
+      "purposeGroup": "Sale and finance",
+      "applicabilityRoute": "Cash deposit or purchase price is due.",
+      "timing": "Contractual due date/before lodgement approval.",
+      "reviewLimits": "Review facts and payment evidence.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "conditional"
+        },
+        "transfer.auction": {
+          "kind": "conditional"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "conditional"
+        },
+        "transfer.property_in_possession": {
+          "kind": "conditional"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "conditional"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "conditional"
+        },
+        "transfer.donation": {
+          "kind": "conditional"
+        }
+      }
+    },
+    {
+      "id": "DOC-023",
+      "name": "Last will and testament",
+      "purposeGroup": "Estate and inheritance",
+      "applicabilityRoute": "A testate estate/will determines executor powers.",
+      "timing": "Before inheritance/estate authority approval.",
+      "reviewLimits": "Review facts and execution; standalone estate sale is outside P0.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "conditional"
+        },
+        "transfer.auction": {
+          "kind": "conditional"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "not_applicable"
+        },
+        "transfer.property_in_possession": {
+          "kind": "conditional"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "conditional"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "conditional"
+        },
+        "transfer.donation": {
+          "kind": "conditional"
+        }
+      }
+    },
+    {
+      "id": "DOC-024",
+      "name": "Letters of executorship / applicable appointment",
+      "purposeGroup": "Estate and inheritance",
+      "applicabilityRoute": "A representative transfers or endorses estate property.",
+      "timing": "Before the executor acts/signs.",
+      "reviewLimits": "Review appointment, facts and execution.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "conditional"
+        },
+        "transfer.auction": {
+          "kind": "conditional"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "not_applicable"
+        },
+        "transfer.property_in_possession": {
+          "kind": "conditional"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "required"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "required"
+        },
+        "transfer.donation": {
+          "kind": "conditional"
+        }
+      }
+    },
+    {
+      "id": "DOC-025",
+      "name": "Liquidation and distribution account",
+      "purposeGroup": "Estate and inheritance",
+      "applicabilityRoute": "Inheritance/Section45 entitlement depends on distribution.",
+      "timing": "Before distribution transfer/tax clearance.",
+      "reviewLimits": "Small-estate alternatives require Master/conveyancer confirmation.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "conditional"
+        },
+        "transfer.auction": {
+          "kind": "not_applicable"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "not_applicable"
+        },
+        "transfer.property_in_possession": {
+          "kind": "not_applicable"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "required"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "required"
+        },
+        "transfer.donation": {
+          "kind": "not_applicable"
+        }
+      }
+    },
+    {
+      "id": "DOC-026",
+      "name": "Redistribution agreement",
+      "purposeGroup": "Estate and inheritance",
+      "applicabilityRoute": "Beneficiaries redistribute.",
+      "timing": "Before entitlement approval/tax.",
+      "reviewLimits": "Review facts and execution.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "conditional"
+        },
+        "transfer.auction": {
+          "kind": "not_applicable"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "not_applicable"
+        },
+        "transfer.property_in_possession": {
+          "kind": "not_applicable"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "conditional"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "conditional"
+        },
+        "transfer.donation": {
+          "kind": "not_applicable"
+        }
+      }
+    },
+    {
+      "id": "DOC-027",
+      "name": "Renunciation / repudiation / adiation evidence",
+      "purposeGroup": "Estate and inheritance",
+      "applicabilityRoute": "A beneficiary election alters entitlement.",
+      "timing": "Before entitlement approval/tax.",
+      "reviewLimits": "Review facts and execution.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "conditional"
+        },
+        "transfer.auction": {
+          "kind": "not_applicable"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "not_applicable"
+        },
+        "transfer.property_in_possession": {
+          "kind": "not_applicable"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "conditional"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "conditional"
+        },
+        "transfer.donation": {
+          "kind": "not_applicable"
+        }
+      }
+    },
+    {
+      "id": "DOC-028",
+      "name": "Auction conditions and signed sale record",
+      "purposeGroup": "Auction and execution",
+      "applicabilityRoute": "Auction conditions/signed record; Required for Auction and Sale in Execution.",
+      "timing": "Before relying on the auction outcome for transfer processing.",
+      "reviewLimits": "Legal-form sufficiency remains unresolved and requires review.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "New conversational timing decision approved by Dean, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "not_applicable"
+        },
+        "transfer.auction": {
+          "kind": "required"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "required"
+        },
+        "transfer.property_in_possession": {
+          "kind": "not_applicable"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "not_applicable"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "not_applicable"
+        },
+        "transfer.donation": {
+          "kind": "not_applicable"
+        }
+      }
+    },
+    {
+      "id": "DOC-029",
+      "name": "Court order / writ supporting execution sale",
+      "purposeGroup": "Auction and execution",
+      "applicabilityRoute": "Order/writ; Required for Sale in Execution.",
+      "timing": "Before execution authority approval/transfer preparation.",
+      "reviewLimits": "Responsible legal reviewer confirms current documents/forms.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "New conversational timing decision approved by Dean, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "not_applicable"
+        },
+        "transfer.auction": {
+          "kind": "not_applicable"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "required"
+        },
+        "transfer.property_in_possession": {
+          "kind": "not_applicable"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "not_applicable"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "not_applicable"
+        },
+        "transfer.donation": {
+          "kind": "not_applicable"
+        }
+      }
+    },
+    {
+      "id": "DOC-030",
+      "name": "Power of attorney to pass transfer",
+      "purposeGroup": "Property and transfer",
+      "applicabilityRoute": "Signed power of attorney to pass transfer.",
+      "timing": "Before the conveyancer acts and before lodgement.",
+      "reviewLimits": "Review parties, property, transaction and execution.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "New conversational timing decision approved by Dean, 2026-10-06",
+      "signatureFlag": "Yes",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "required"
+        },
+        "transfer.auction": {
+          "kind": "required"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "required"
+        },
+        "transfer.property_in_possession": {
+          "kind": "required"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "required"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "not_applicable"
+        },
+        "transfer.donation": {
+          "kind": "required"
+        }
+      }
+    },
+    {
+      "id": "DOC-031",
+      "name": "Transferor declaration / affidavit",
+      "purposeGroup": "Property and transfer",
+      "applicabilityRoute": "Transferor information/declaration is needed for the route.",
+      "timing": "Signing/before tax.",
+      "reviewLimits": "Review signature, facts and execution.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "Yes",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "conditional"
+        },
+        "transfer.auction": {
+          "kind": "conditional"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "conditional"
+        },
+        "transfer.property_in_possession": {
+          "kind": "conditional"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "conditional"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "conditional"
+        },
+        "transfer.donation": {
+          "kind": "conditional"
+        }
+      }
+    },
+    {
+      "id": "DOC-032",
+      "name": "Transferee declaration / affidavit",
+      "purposeGroup": "Property and transfer",
+      "applicabilityRoute": "Transferee information/declaration is needed.",
+      "timing": "Signing/before tax.",
+      "reviewLimits": "Review signature, facts and execution.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "Yes",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "conditional"
+        },
+        "transfer.auction": {
+          "kind": "conditional"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "conditional"
+        },
+        "transfer.property_in_possession": {
+          "kind": "conditional"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "conditional"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "conditional"
+        },
+        "transfer.donation": {
+          "kind": "conditional"
+        }
+      }
+    },
+    {
+      "id": "DOC-033",
+      "name": "FICA / client information questionnaire",
+      "purposeGroup": "Identity and FICA",
+      "applicabilityRoute": "Existing Golden Records client: reuse/link suitable FICA information and evidence, review currency/completeness/sufficiency, and collect only missing/outdated items. Direct DEEDLY-created client: capture information and collect evidence at onboarding.",
+      "timing": "Before CDD approval.",
+      "reviewLimits": "A completed questionnaire alone is not compliance. Supporting evidence and reviewer acceptance follow the RMCP; no runtime capability is authorised.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "required"
+        },
+        "transfer.auction": {
+          "kind": "required"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "required"
+        },
+        "transfer.property_in_possession": {
+          "kind": "required"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "required"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "required"
+        },
+        "transfer.donation": {
+          "kind": "required"
+        }
+      }
+    },
+    {
+      "id": "DOC-034",
+      "name": "Spousal consent",
+      "purposeGroup": "Marriage and consent",
+      "applicabilityRoute": "The property regime/act requires spouse consent.",
+      "timing": "Before the binding act.",
+      "reviewLimits": "Review signature, applicable law, exceptions and formalities.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "Yes",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "conditional"
+        },
+        "transfer.auction": {
+          "kind": "conditional"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "conditional"
+        },
+        "transfer.property_in_possession": {
+          "kind": "conditional"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "conditional"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "conditional"
+        },
+        "transfer.donation": {
+          "kind": "conditional"
+        }
+      }
+    },
+    {
+      "id": "DOC-035",
+      "name": "Deed of transfer",
+      "purposeGroup": "Property and transfer",
+      "applicabilityRoute": "Executed transfer deed.",
+      "timing": "Before lodgement.",
+      "reviewLimits": "Review parties, property, route and authority.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "New conversational timing decision approved by Dean, 2026-10-06",
+      "signatureFlag": "Yes",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "required"
+        },
+        "transfer.auction": {
+          "kind": "required"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "required"
+        },
+        "transfer.property_in_possession": {
+          "kind": "required"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "required"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "not_applicable"
+        },
+        "transfer.donation": {
+          "kind": "required"
+        }
+      }
+    },
+    {
+      "id": "DOC-036",
+      "name": "Transfer duty declaration (TDC01)",
+      "purposeGroup": "Tax and payments",
+      "applicabilityRoute": "TDC01 declaration.",
+      "timing": "Before SARS submission.",
+      "reviewLimits": "Review transaction, tax and signatures; no tax threshold is independently verified here.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "New conversational timing decision approved by Dean, 2026-10-06",
+      "signatureFlag": "Yes",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "required"
+        },
+        "transfer.auction": {
+          "kind": "required"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "required"
+        },
+        "transfer.property_in_possession": {
+          "kind": "required"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "required"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "required"
+        },
+        "transfer.donation": {
+          "kind": "required"
+        }
+      }
+    },
+    {
+      "id": "DOC-037",
+      "name": "Deed of donation",
+      "purposeGroup": "Property and transfer",
+      "applicabilityRoute": "Signed donation deed.",
+      "timing": "Before relying on authority and before lodgement.",
+      "reviewLimits": "Review parties, property, terms and execution.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "New conversational timing decision approved by Dean, 2026-10-06",
+      "signatureFlag": "Yes",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "not_applicable"
+        },
+        "transfer.auction": {
+          "kind": "not_applicable"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "not_applicable"
+        },
+        "transfer.property_in_possession": {
+          "kind": "not_applicable"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "not_applicable"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "not_applicable"
+        },
+        "transfer.donation": {
+          "kind": "required"
+        }
+      }
+    },
+    {
+      "id": "DOC-038",
+      "name": "Section 45 endorsement application",
+      "purposeGroup": "Property and transfer",
+      "applicabilityRoute": "Signed Section45 application.",
+      "timing": "Before endorsement lodgement.",
+      "reviewLimits": "Review parties, property, entitlement and authority.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "New conversational timing decision approved by Dean, 2026-10-06",
+      "signatureFlag": "Yes",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "not_applicable"
+        },
+        "transfer.auction": {
+          "kind": "not_applicable"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "not_applicable"
+        },
+        "transfer.property_in_possession": {
+          "kind": "not_applicable"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "not_applicable"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "required"
+        },
+        "transfer.donation": {
+          "kind": "not_applicable"
+        }
+      }
+    },
+    {
+      "id": "DOC-039",
+      "name": "Section 45bis endorsement application",
+      "purposeGroup": "Outside approved P0 groups",
+      "applicabilityRoute": "Outside P0.",
+      "timing": "No P0 due stage.",
+      "reviewLimits": "Section45bis remains outside P0; retain the source record separately.",
+      "decisionStatus": "Outside P0",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "Yes",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "outside_p0"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "outside_p0"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "outside_p0"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "outside_p0"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "outside_p0"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "outside_p0"
+        },
+        "transfer.auction": {
+          "kind": "outside_p0"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "outside_p0"
+        },
+        "transfer.property_in_possession": {
+          "kind": "outside_p0"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "outside_p0"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "outside_p0"
+        },
+        "transfer.donation": {
+          "kind": "outside_p0"
+        }
+      }
+    },
+    {
+      "id": "DOC-040",
+      "name": "Conveyancer’s sectional title certificate (s15B)",
+      "purposeGroup": "Property and transfer",
+      "applicabilityRoute": "Preserve Required on sectional_title_register and extension_of_scheme. On the other ten approved codes: Required for Sectional Title, Conditional for Freehold.",
+      "timing": "Before sectional lodgement; signed.",
+      "reviewLimits": "Use the appropriate no-body-corporate route rather than demanding clearance. Preserve classification and tenure decisions; this settles DT-02/DT-04.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "Yes",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "tenure_split",
+          "sectional": "required",
+          "freehold": "conditional",
+          "raw": "Required if Sectional Title; Conditional if Freehold"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "tenure_split",
+          "sectional": "required",
+          "freehold": "conditional",
+          "raw": "Required if Sectional Title; Conditional if Freehold"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "tenure_split",
+          "sectional": "required",
+          "freehold": "conditional",
+          "raw": "Required if Sectional Title; Conditional if Freehold"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "tenure_split",
+          "sectional": "required",
+          "freehold": "conditional",
+          "raw": "Required if Sectional Title; Conditional if Freehold"
+        },
+        "transfer.auction": {
+          "kind": "tenure_split",
+          "sectional": "required",
+          "freehold": "conditional",
+          "raw": "Required if Sectional Title; Conditional if Freehold"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "tenure_split",
+          "sectional": "required",
+          "freehold": "conditional",
+          "raw": "Required if Sectional Title; Conditional if Freehold"
+        },
+        "transfer.property_in_possession": {
+          "kind": "tenure_split",
+          "sectional": "required",
+          "freehold": "conditional",
+          "raw": "Required if Sectional Title; Conditional if Freehold"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "tenure_split",
+          "sectional": "required",
+          "freehold": "conditional",
+          "raw": "Required if Sectional Title; Conditional if Freehold"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "tenure_split",
+          "sectional": "required",
+          "freehold": "conditional",
+          "raw": "Required if Sectional Title; Conditional if Freehold"
+        },
+        "transfer.donation": {
+          "kind": "tenure_split",
+          "sectional": "required",
+          "freehold": "conditional",
+          "raw": "Required if Sectional Title; Conditional if Freehold"
+        }
+      }
+    },
+    {
+      "id": "DOC-041",
+      "name": "Transfer cost quotation / pro forma",
+      "purposeGroup": "Tax and payments",
+      "applicabilityRoute": "Quotation is provided and reviewed.",
+      "timing": "Before requesting cost payment.",
+      "reviewLimits": "Review fees, tax, disbursements and estimates.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "New conversational timing decision approved by Dean, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "required"
+        },
+        "transfer.auction": {
+          "kind": "required"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "required"
+        },
+        "transfer.property_in_possession": {
+          "kind": "required"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "required"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "required"
+        },
+        "transfer.donation": {
+          "kind": "required"
+        }
+      }
+    },
+    {
+      "id": "DOC-042",
+      "name": "Final account / statement of distribution",
+      "purposeGroup": "Tax and payments",
+      "applicabilityRoute": "Entries require reconciliation.",
+      "timing": "Final payout/closure.",
+      "reviewLimits": "Review facts and execution.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "conditional"
+        },
+        "transfer.auction": {
+          "kind": "conditional"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "conditional"
+        },
+        "transfer.property_in_possession": {
+          "kind": "conditional"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "conditional"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "conditional"
+        },
+        "transfer.donation": {
+          "kind": "conditional"
+        }
+      }
+    },
+    {
+      "id": "DOC-043",
+      "name": "Registration notification",
+      "purposeGroup": "Bulk transfer and registration",
+      "applicabilityRoute": "Optional notification after verified registration.",
+      "timing": "After verified registration.",
+      "reviewLimits": "Does not block completion; Optional remains distinct from evidence progress.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "New conversational timing decision approved by Dean, 2026-10-06",
+      "signatureFlag": "Yes",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "optional"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "optional"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "optional"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "optional"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "optional"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "optional"
+        },
+        "transfer.auction": {
+          "kind": "optional"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "optional"
+        },
+        "transfer.property_in_possession": {
+          "kind": "optional"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "optional"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "optional"
+        },
+        "transfer.donation": {
+          "kind": "optional"
+        }
+      }
+    },
+    {
+      "id": "DOC-044",
+      "name": "Rates clearance figures",
+      "purposeGroup": "Clearances and compliance",
+      "applicabilityRoute": "Municipal clearance is needed.",
+      "timing": "Clearance preparation.",
+      "reviewLimits": "Review facts and execution.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "conditional"
+        },
+        "transfer.auction": {
+          "kind": "conditional"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "conditional"
+        },
+        "transfer.property_in_possession": {
+          "kind": "conditional"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "conditional"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "conditional"
+        },
+        "transfer.donation": {
+          "kind": "conditional"
+        }
+      }
+    },
+    {
+      "id": "DOC-045",
+      "name": "Rates clearance certificate",
+      "purposeGroup": "Clearances and compliance",
+      "applicabilityRoute": "Ordinary rateable-property transfer.",
+      "timing": "Before lodgement and valid at registration.",
+      "reviewLimits": "Exceptions, endorsements and development routes require legal confirmation.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "required"
+        },
+        "transfer.auction": {
+          "kind": "required"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "required"
+        },
+        "transfer.property_in_possession": {
+          "kind": "required"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "required"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "conditional"
+        },
+        "transfer.donation": {
+          "kind": "required"
+        }
+      }
+    },
+    {
+      "id": "DOC-046",
+      "name": "Body corporate levy clearance confirmation",
+      "purposeGroup": "Clearances and compliance",
+      "applicabilityRoute": "Required for sectional tenure; otherwise Conditional where levy clearance applies. Managing-agent confirmation is accepted; if no managing agent exists, body corporate confirmation suffices.",
+      "timing": "Before DOC-040 certification.",
+      "reviewLimits": "Review facts and execution. The separate new levy certificate is additional and follows its own specific mapping, not this general DOC-046 mapping.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "tenure_split",
+          "sectional": "required",
+          "freehold": "conditional",
+          "raw": "Required if Sectional Title; Conditional if Freehold and applicable"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "tenure_split",
+          "sectional": "required",
+          "freehold": "conditional",
+          "raw": "Required if Sectional Title; Conditional if Freehold and applicable"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "tenure_split",
+          "sectional": "required",
+          "freehold": "conditional",
+          "raw": "Required if Sectional Title; Conditional if Freehold and applicable"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "tenure_split",
+          "sectional": "required",
+          "freehold": "conditional",
+          "raw": "Required if Sectional Title; Conditional if Freehold and applicable"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "tenure_split",
+          "sectional": "required",
+          "freehold": "conditional",
+          "raw": "Required if Sectional Title; Conditional if Freehold and applicable"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "tenure_split",
+          "sectional": "required",
+          "freehold": "conditional",
+          "raw": "Required if Sectional Title; Conditional if Freehold and applicable"
+        },
+        "transfer.auction": {
+          "kind": "tenure_split",
+          "sectional": "required",
+          "freehold": "conditional",
+          "raw": "Required if Sectional Title; Conditional if Freehold and applicable"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "tenure_split",
+          "sectional": "required",
+          "freehold": "conditional",
+          "raw": "Required if Sectional Title; Conditional if Freehold and applicable"
+        },
+        "transfer.property_in_possession": {
+          "kind": "tenure_split",
+          "sectional": "required",
+          "freehold": "conditional",
+          "raw": "Required if Sectional Title; Conditional if Freehold and applicable"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "tenure_split",
+          "sectional": "required",
+          "freehold": "conditional",
+          "raw": "Required if Sectional Title; Conditional if Freehold and applicable"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "tenure_split",
+          "sectional": "required",
+          "freehold": "conditional",
+          "raw": "Required if Sectional Title; Conditional if Freehold and applicable"
+        },
+        "transfer.donation": {
+          "kind": "tenure_split",
+          "sectional": "required",
+          "freehold": "conditional",
+          "raw": "Required if Sectional Title; Conditional if Freehold and applicable"
+        }
+      }
+    },
+    {
+      "id": "DOC-047",
+      "name": "HOA consent / clearance",
+      "purposeGroup": "Clearances and compliance",
+      "applicabilityRoute": "An actual title condition or binding HOA rule requires clearance/consent.",
+      "timing": "Signing/lodgement as specified.",
+      "reviewLimits": "Review the title and constitution; no universal Freehold demand.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "conditional"
+        },
+        "transfer.auction": {
+          "kind": "conditional"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "conditional"
+        },
+        "transfer.property_in_possession": {
+          "kind": "conditional"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "conditional"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "conditional"
+        },
+        "transfer.donation": {
+          "kind": "conditional"
+        }
+      }
+    },
+    {
+      "id": "DOC-048",
+      "name": "SARS transfer duty receipt / exemption receipt",
+      "purposeGroup": "Tax and payments",
+      "applicabilityRoute": "Correct transaction duty payment/exemption receipt. May be reused/linked from Legitify Golden Records after transaction-specific verification; no duplicate request.",
+      "timing": "Before lodgement approval.",
+      "reviewLimits": "Review the correct transaction and tax outcome; reuse is not automatic acceptance.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "New conversational timing decision approved by Dean, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "required"
+        },
+        "transfer.auction": {
+          "kind": "required"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "required"
+        },
+        "transfer.property_in_possession": {
+          "kind": "required"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "required"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "required"
+        },
+        "transfer.donation": {
+          "kind": "required"
+        }
+      }
+    },
+    {
+      "id": "DOC-049",
+      "name": "Bond approval letter",
+      "purposeGroup": "Sale and finance",
+      "applicabilityRoute": "Buyer relies on bond finance.",
+      "timing": "Finance-condition deadline.",
+      "reviewLimits": "Approval is not proof the purchase price is secured.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "conditional"
+        },
+        "transfer.auction": {
+          "kind": "conditional"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "conditional"
+        },
+        "transfer.property_in_possession": {
+          "kind": "conditional"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "not_applicable"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "not_applicable"
+        },
+        "transfer.donation": {
+          "kind": "not_applicable"
+        }
+      }
+    },
+    {
+      "id": "DOC-050",
+      "name": "Bank / financial guarantee",
+      "purposeGroup": "Sale and finance",
+      "applicabilityRoute": "Contract requires a guarantee or lender price security.",
+      "timing": "Guarantee deadline/before lodgement.",
+      "reviewLimits": "No universal cash/inheritance demand.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "conditional"
+        },
+        "transfer.auction": {
+          "kind": "conditional"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "conditional"
+        },
+        "transfer.property_in_possession": {
+          "kind": "conditional"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "not_applicable"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "not_applicable"
+        },
+        "transfer.donation": {
+          "kind": "not_applicable"
+        }
+      }
+    },
+    {
+      "id": "DOC-051",
+      "name": "Bond cancellation figures",
+      "purposeGroup": "Sale and finance",
+      "applicabilityRoute": "Registered bond cancellation applies.",
+      "timing": "Before arranging cancellation.",
+      "reviewLimits": "Review facts and execution.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "conditional"
+        },
+        "transfer.auction": {
+          "kind": "conditional"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "conditional"
+        },
+        "transfer.property_in_possession": {
+          "kind": "conditional"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "conditional"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "conditional"
+        },
+        "transfer.donation": {
+          "kind": "conditional"
+        }
+      }
+    },
+    {
+      "id": "DOC-052",
+      "name": "Consent to cancellation of bond",
+      "purposeGroup": "Sale and finance",
+      "applicabilityRoute": "Cancellation consent is needed for linked cancellation lodgement.",
+      "timing": "Before linked cancellation lodgement.",
+      "reviewLimits": "Do not additionally require cancellation consent where an approved release/substitution replaces cancellation.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "conditional"
+        },
+        "transfer.auction": {
+          "kind": "conditional"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "conditional"
+        },
+        "transfer.property_in_possession": {
+          "kind": "conditional"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "conditional"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "conditional"
+        },
+        "transfer.donation": {
+          "kind": "conditional"
+        }
+      }
+    },
+    {
+      "id": "DOC-053",
+      "name": "Existing title deed / registered copy",
+      "purposeGroup": "Property and transfer",
+      "applicabilityRoute": "Title deed/registered copy; reuse suitable evidence.",
+      "timing": "Investigation/before transfer preparation.",
+      "reviewLimits": "Review owner, property, conditions and endorsements.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "New conversational timing decision approved by Dean, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "required"
+        },
+        "transfer.auction": {
+          "kind": "required"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "required"
+        },
+        "transfer.property_in_possession": {
+          "kind": "required"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "required"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "required"
+        },
+        "transfer.donation": {
+          "kind": "required"
+        }
+      }
+    },
+    {
+      "id": "DOC-054",
+      "name": "Deeds search report",
+      "purposeGroup": "Property and transfer",
+      "applicabilityRoute": "Deeds search.",
+      "timing": "Investigation/before lodgement approval.",
+      "reviewLimits": "Review ownership, bonds, restrictions and rights; currency standard remains outstanding.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "New conversational timing decision approved by Dean, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "required"
+        },
+        "transfer.auction": {
+          "kind": "required"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "required"
+        },
+        "transfer.property_in_possession": {
+          "kind": "required"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "required"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "required"
+        },
+        "transfer.donation": {
+          "kind": "required"
+        }
+      }
+    },
+    {
+      "id": "DOC-055",
+      "name": "Electrical certificate of compliance",
+      "purposeGroup": "Clearances and compliance",
+      "applicabilityRoute": "Electrical installation exists and the applicable ownership trigger applies.",
+      "timing": "Ownership change/contract deadline.",
+      "reviewLimits": "Validate regulations and exceptions; do not demand it for bare land without an installation.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "conditional"
+        },
+        "transfer.auction": {
+          "kind": "conditional"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "conditional"
+        },
+        "transfer.property_in_possession": {
+          "kind": "conditional"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "conditional"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "conditional"
+        },
+        "transfer.donation": {
+          "kind": "conditional"
+        }
+      }
+    },
+    {
+      "id": "DOC-056",
+      "name": "Gas certificate of conformity",
+      "purposeGroup": "Clearances and compliance",
+      "applicabilityRoute": "Gas installation and relevant trigger apply.",
+      "timing": "Before owner/user change or handover.",
+      "reviewLimits": "Review facts and execution.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "conditional"
+        },
+        "transfer.auction": {
+          "kind": "conditional"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "conditional"
+        },
+        "transfer.property_in_possession": {
+          "kind": "conditional"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "conditional"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "conditional"
+        },
+        "transfer.donation": {
+          "kind": "conditional"
+        }
+      }
+    },
+    {
+      "id": "DOC-057",
+      "name": "Electric fence compliance certificate",
+      "purposeGroup": "Clearances and compliance",
+      "applicabilityRoute": "Electric fence and relevant trigger apply.",
+      "timing": "Ownership change/contract deadline.",
+      "reviewLimits": "Verify scope and transitional exceptions before a hard gate.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "conditional"
+        },
+        "transfer.auction": {
+          "kind": "conditional"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "conditional"
+        },
+        "transfer.property_in_possession": {
+          "kind": "conditional"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "conditional"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "conditional"
+        },
+        "transfer.donation": {
+          "kind": "conditional"
+        }
+      }
+    },
+    {
+      "id": "DOC-058",
+      "name": "Beetle / wood-destroying organism certificate",
+      "purposeGroup": "Clearances and compliance",
+      "applicabilityRoute": "Sale or lender requires a WDO certificate.",
+      "timing": "Contractual deadline.",
+      "reviewLimits": "Not a universal national requirement; preserve Optional per-classification source levels.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "conditional"
+        },
+        "transfer.auction": {
+          "kind": "conditional"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "conditional"
+        },
+        "transfer.property_in_possession": {
+          "kind": "conditional"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "optional"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "optional"
+        },
+        "transfer.donation": {
+          "kind": "optional"
+        }
+      }
+    },
+    {
+      "id": "DOC-059",
+      "name": "Water / plumbing compliance certificate",
+      "purposeGroup": "Clearances and compliance",
+      "applicabilityRoute": "An applicable municipal water rule applies.",
+      "timing": "Before transfer as specified.",
+      "reviewLimits": "Verify current by-law, non-sale and endorsement scope.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "conditional"
+        },
+        "transfer.auction": {
+          "kind": "conditional"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "conditional"
+        },
+        "transfer.property_in_possession": {
+          "kind": "conditional"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "conditional"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "conditional"
+        },
+        "transfer.donation": {
+          "kind": "conditional"
+        }
+      }
+    },
+    {
+      "id": "DOC-060",
+      "name": "Property valuation report(s)",
+      "purposeGroup": "Tax and payments",
+      "applicabilityRoute": "Donation, connected-party/partial-share sale or SARS request applies.",
+      "timing": "Before relevant tax submission.",
+      "reviewLimits": "Auction/execution is not a routine tax valuation demand; lender/court valuations are separate. Preserve per-classification source levels.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "conditional"
+        },
+        "transfer.auction": {
+          "kind": "optional"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "optional"
+        },
+        "transfer.property_in_possession": {
+          "kind": "conditional"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "conditional"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "conditional"
+        },
+        "transfer.donation": {
+          "kind": "required"
+        }
+      }
+    },
+    {
+      "id": "DOC-061",
+      "name": "Master’s section 42(2) certificate",
+      "purposeGroup": "Estate and inheritance",
+      "applicabilityRoute": "Conditional within existing approved codes when an estate-sale route applies.",
+      "timing": "Before lodgement.",
+      "reviewLimits": "Attorney confirms the s42(2), pre-death-contract route and exceptions; separate from inheritance. Preserve exact source levels. Standalone estate sale remains outside P0.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "conditional"
+        },
+        "transfer.auction": {
+          "kind": "conditional"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "not_applicable"
+        },
+        "transfer.property_in_possession": {
+          "kind": "conditional"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "not_applicable"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "not_applicable"
+        },
+        "transfer.donation": {
+          "kind": "conditional"
+        }
+      }
+    },
+    {
+      "id": "DOC-062",
+      "name": "Estate sale authority evidence",
+      "purposeGroup": "Estate and inheritance",
+      "applicabilityRoute": "Conditional within existing approved codes when an executor sells after death.",
+      "timing": "Before sale approval.",
+      "reviewLimits": "Review will/heir or Master route; pre-death/conflict branches are separate. Preserve exact source levels; standalone estate sale remains outside P0.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "conditional"
+        },
+        "transfer.auction": {
+          "kind": "conditional"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "not_applicable"
+        },
+        "transfer.property_in_possession": {
+          "kind": "conditional"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "not_applicable"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "not_applicable"
+        },
+        "transfer.donation": {
+          "kind": "conditional"
+        }
+      }
+    },
+    {
+      "id": "DOC-063",
+      "name": "Mortgagee consent / release",
+      "purposeGroup": "Property and transfer",
+      "applicabilityRoute": "Bonded land/right requires mortgagee release or consent.",
+      "timing": "Before relevant lodgement.",
+      "reviewLimits": "Review facts and execution; no P0 expansion.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "conditional"
+        },
+        "transfer.auction": {
+          "kind": "conditional"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "conditional"
+        },
+        "transfer.property_in_possession": {
+          "kind": "conditional"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "conditional"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "conditional"
+        },
+        "transfer.donation": {
+          "kind": "conditional"
+        }
+      }
+    },
+    {
+      "id": "DOC-064",
+      "name": "Approved sectional plan",
+      "purposeGroup": "Development related",
+      "applicabilityRoute": "Approved sectional plan for development/linked first transfer.",
+      "timing": "Before opening/extending the register.",
+      "reviewLimits": "Approved registered-development evidence may satisfy the linked dependency without duplicate upload. No standalone-development expansion.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "not_applicable"
+        },
+        "transfer.auction": {
+          "kind": "not_applicable"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "not_applicable"
+        },
+        "transfer.property_in_possession": {
+          "kind": "not_applicable"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "not_applicable"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "not_applicable"
+        },
+        "transfer.donation": {
+          "kind": "not_applicable"
+        }
+      }
+    },
+    {
+      "id": "DOC-065",
+      "name": "Approved general plan / subdivision diagram",
+      "purposeGroup": "Development related",
+      "applicabilityRoute": "Township/subdivision plan applies.",
+      "timing": "Before registration.",
+      "reviewLimits": "Review facts and execution; P0 scope unchanged.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "not_applicable"
+        },
+        "transfer.auction": {
+          "kind": "not_applicable"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "not_applicable"
+        },
+        "transfer.property_in_possession": {
+          "kind": "not_applicable"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "not_applicable"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "not_applicable"
+        },
+        "transfer.donation": {
+          "kind": "not_applicable"
+        }
+      }
+    },
+    {
+      "id": "DOC-066",
+      "name": "Planning approval and conditions",
+      "purposeGroup": "Development related",
+      "applicabilityRoute": "Land-use approval is needed.",
+      "timing": "Before registration preparation.",
+      "reviewLimits": "Review site-specific permissions.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "not_applicable"
+        },
+        "transfer.auction": {
+          "kind": "not_applicable"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "not_applicable"
+        },
+        "transfer.property_in_possession": {
+          "kind": "not_applicable"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "not_applicable"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "not_applicable"
+        },
+        "transfer.donation": {
+          "kind": "not_applicable"
+        }
+      }
+    },
+    {
+      "id": "DOC-067",
+      "name": "Development register / subdivision application",
+      "purposeGroup": "Outside approved P0 groups",
+      "applicabilityRoute": "Not applicable across all twelve approved codes.",
+      "timing": "No P0 due stage.",
+      "reviewLimits": "Retain source baseline; no standalone-development expansion.",
+      "decisionStatus": "Approved N/A in P0",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "Yes",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "not_applicable"
+        },
+        "transfer.auction": {
+          "kind": "not_applicable"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "not_applicable"
+        },
+        "transfer.property_in_possession": {
+          "kind": "not_applicable"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "not_applicable"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "not_applicable"
+        },
+        "transfer.donation": {
+          "kind": "not_applicable"
+        }
+      }
+    },
+    {
+      "id": "DOC-068",
+      "name": "Certificates of registered title / sectional title",
+      "purposeGroup": "Outside approved P0 groups",
+      "applicabilityRoute": "Not applicable across all twelve approved codes.",
+      "timing": "No P0 due stage.",
+      "reviewLimits": "Retain source baseline; no standalone-development expansion.",
+      "decisionStatus": "Approved N/A in P0",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "not_applicable"
+        },
+        "transfer.auction": {
+          "kind": "not_applicable"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "not_applicable"
+        },
+        "transfer.property_in_possession": {
+          "kind": "not_applicable"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "not_applicable"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "not_applicable"
+        },
+        "transfer.donation": {
+          "kind": "not_applicable"
+        }
+      }
+    },
+    {
+      "id": "DOC-069",
+      "name": "Registered extension-right title / evidence",
+      "purposeGroup": "Development related",
+      "applicabilityRoute": "Reserved/transferred extension right applies.",
+      "timing": "Before authority approval.",
+      "reviewLimits": "Do not demand a developer right when the lawful body-corporate route applies.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "not_applicable"
+        },
+        "transfer.auction": {
+          "kind": "not_applicable"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "not_applicable"
+        },
+        "transfer.property_in_possession": {
+          "kind": "not_applicable"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "not_applicable"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "not_applicable"
+        },
+        "transfer.donation": {
+          "kind": "not_applicable"
+        }
+      }
+    },
+    {
+      "id": "DOC-070",
+      "name": "Scheme rules / applicable body corporate resolution",
+      "purposeGroup": "Development related",
+      "applicabilityRoute": "Conditional on sectional_title_register and extension_of_scheme; Not applicable on the other ten approved codes. No general tenure promotion.",
+      "timing": "Before development authority/lodgement when scheme rules/member/mortgagee approvals apply.",
+      "reviewLimits": "Review exact applicable approvals; this settles DT-02. Keep the single source row until a separately reviewed split.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "not_applicable"
+        },
+        "transfer.auction": {
+          "kind": "not_applicable"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "not_applicable"
+        },
+        "transfer.property_in_possession": {
+          "kind": "not_applicable"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "not_applicable"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "not_applicable"
+        },
+        "transfer.donation": {
+          "kind": "not_applicable"
+        }
+      }
+    },
+    {
+      "id": "DOC-071",
+      "name": "Conveyancer’s section 42(1) certificate",
+      "purposeGroup": "Estate and inheritance",
+      "applicabilityRoute": "Applicable s42(1) distribution/endorsement route.",
+      "timing": "Before inheritance/Section45 lodgement.",
+      "reviewLimits": "Small-estate route requires practitioner confirmation.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "conditional"
+        },
+        "transfer.auction": {
+          "kind": "not_applicable"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "not_applicable"
+        },
+        "transfer.property_in_possession": {
+          "kind": "not_applicable"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "required"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "required"
+        },
+        "transfer.donation": {
+          "kind": "not_applicable"
+        }
+      }
+    },
+    {
+      "id": "DOC-072",
+      "name": "Donation tax declaration (IT144)",
+      "purposeGroup": "Tax and payments",
+      "applicabilityRoute": "IT144 in the applicable tax route.",
+      "timing": "Before applicable tax submission.",
+      "reviewLimits": "Review details, tax and signatures.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "New conversational timing decision approved by Dean, 2026-10-06",
+      "signatureFlag": "Yes",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "not_applicable"
+        },
+        "transfer.auction": {
+          "kind": "not_applicable"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "not_applicable"
+        },
+        "transfer.property_in_possession": {
+          "kind": "not_applicable"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "not_applicable"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "not_applicable"
+        },
+        "transfer.donation": {
+          "kind": "required"
+        }
+      }
+    },
+    {
+      "id": "DOC-073",
+      "name": "Next-of-kin affidavit",
+      "purposeGroup": "Estate and inheritance",
+      "applicabilityRoute": "Intestate estate; signed next-of-kin affidavit.",
+      "timing": "Before entitlement approval/tax.",
+      "reviewLimits": "Review facts and execution.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "Yes",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "conditional"
+        },
+        "transfer.auction": {
+          "kind": "not_applicable"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "not_applicable"
+        },
+        "transfer.property_in_possession": {
+          "kind": "not_applicable"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "conditional"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "conditional"
+        },
+        "transfer.donation": {
+          "kind": "not_applicable"
+        }
+      }
+    },
+    {
+      "id": "DOC-074",
+      "name": "Death notice",
+      "purposeGroup": "Estate and inheritance",
+      "applicabilityRoute": "No liquidation/distribution account is available in the applicable intestate SARS branch.",
+      "timing": "Before estate tax where applicable.",
+      "reviewLimits": "This does not exempt liquidation/distribution obligations; review facts and execution.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "conditional"
+        },
+        "transfer.auction": {
+          "kind": "not_applicable"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "not_applicable"
+        },
+        "transfer.property_in_possession": {
+          "kind": "not_applicable"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "conditional"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "conditional"
+        },
+        "transfer.donation": {
+          "kind": "not_applicable"
+        }
+      }
+    },
+    {
+      "id": "DOC-075",
+      "name": "Municipal development-condition compliance certificate (s53)",
+      "purposeGroup": "Development related",
+      "applicabilityRoute": "Applicable s53 route; signed.",
+      "timing": "Before development-result registration.",
+      "reviewLimits": "Confirm the exact municipal route.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "Yes",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "not_applicable"
+        },
+        "transfer.auction": {
+          "kind": "not_applicable"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "not_applicable"
+        },
+        "transfer.property_in_possession": {
+          "kind": "not_applicable"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "not_applicable"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "not_applicable"
+        },
+        "transfer.donation": {
+          "kind": "not_applicable"
+        }
+      }
+    },
+    {
+      "id": "DOC-076",
+      "name": "Conveyancer title-conditions schedule",
+      "purposeGroup": "Outside approved P0 groups",
+      "applicabilityRoute": "Not applicable across all twelve approved codes.",
+      "timing": "No P0 due stage.",
+      "reviewLimits": "Retain source baseline; no standalone-development expansion.",
+      "decisionStatus": "Approved N/A in P0",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "not_applicable"
+        },
+        "transfer.auction": {
+          "kind": "not_applicable"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "not_applicable"
+        },
+        "transfer.property_in_possession": {
+          "kind": "not_applicable"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "not_applicable"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "not_applicable"
+        },
+        "transfer.donation": {
+          "kind": "not_applicable"
+        }
+      }
+    },
+    {
+      "id": "DOC-077",
+      "name": "Conveyancer scheme-rules certificate",
+      "purposeGroup": "Outside approved P0 groups",
+      "applicabilityRoute": "Not applicable across all twelve approved codes.",
+      "timing": "No P0 due stage.",
+      "reviewLimits": "Retain source baseline; no standalone-development expansion.",
+      "decisionStatus": "Approved N/A in P0",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "Yes",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "not_applicable"
+        },
+        "transfer.auction": {
+          "kind": "not_applicable"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "not_applicable"
+        },
+        "transfer.property_in_possession": {
+          "kind": "not_applicable"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "not_applicable"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "not_applicable"
+        },
+        "transfer.donation": {
+          "kind": "not_applicable"
+        }
+      }
+    },
+    {
+      "id": "DOC-078",
+      "name": "Revised participation-quota schedule",
+      "purposeGroup": "Development related",
+      "applicabilityRoute": "Extension alters quotas.",
+      "timing": "Before extension registration.",
+      "reviewLimits": "Other routes require separate scope analysis.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "not_applicable"
+        },
+        "transfer.auction": {
+          "kind": "not_applicable"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "not_applicable"
+        },
+        "transfer.property_in_possession": {
+          "kind": "not_applicable"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "not_applicable"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "not_applicable"
+        },
+        "transfer.donation": {
+          "kind": "not_applicable"
+        }
+      }
+    },
+    {
+      "id": "DOC-079",
+      "name": "Bond debtor-substitution agreement / consent",
+      "purposeGroup": "Sale and finance",
+      "applicabilityRoute": "Permitted Section45 debtor substitution retains the existing bond.",
+      "timing": "Before endorsement lodgement.",
+      "reviewLimits": "Review sole versus joint/several and current registry form. Section45bis remains outside P0.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "not_applicable"
+        },
+        "transfer.auction": {
+          "kind": "not_applicable"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "not_applicable"
+        },
+        "transfer.property_in_possession": {
+          "kind": "not_applicable"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "not_applicable"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "conditional"
+        },
+        "transfer.donation": {
+          "kind": "not_applicable"
+        }
+      }
+    },
+    {
+      "id": "DOC-080",
+      "name": "Sectional title extension / developer-change disclosure",
+      "purposeGroup": "Development related",
+      "applicabilityRoute": "Extension rights/developer change affect the purchaser; signed disclosure.",
+      "timing": "Before sale signing and sectional certification.",
+      "reviewLimits": "Missing disclosure requires an attorney-approved remedy.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "Yes",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "not_applicable"
+        },
+        "transfer.auction": {
+          "kind": "not_applicable"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "not_applicable"
+        },
+        "transfer.property_in_possession": {
+          "kind": "not_applicable"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "not_applicable"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "not_applicable"
+        },
+        "transfer.donation": {
+          "kind": "not_applicable"
+        }
+      }
+    },
+    {
+      "id": "DOC-081",
+      "name": "Suspensive-condition fulfilment / waiver evidence",
+      "purposeGroup": "Sale and finance",
+      "applicabilityRoute": "Unfulfilled/suspensive sale conditions exist.",
+      "timing": "Each condition deadline/before lodgement.",
+      "reviewLimits": "Review facts and execution.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "conditional"
+        },
+        "transfer.auction": {
+          "kind": "conditional"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "conditional"
+        },
+        "transfer.property_in_possession": {
+          "kind": "conditional"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "not_applicable"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "not_applicable"
+        },
+        "transfer.donation": {
+          "kind": "not_applicable"
+        }
+      }
+    },
+    {
+      "id": "DOC-082",
+      "name": "Confirmed registration record",
+      "purposeGroup": "Bulk transfer and registration",
+      "applicabilityRoute": "Confirmed registration record.",
+      "timing": "After registration, before marking the transfer registered.",
+      "reviewLimits": "Review the correct matter, property, parties and details.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "New conversational timing decision approved by Dean, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "required"
+        },
+        "transfer.auction": {
+          "kind": "required"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "required"
+        },
+        "transfer.property_in_possession": {
+          "kind": "required"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "required"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "required"
+        },
+        "transfer.donation": {
+          "kind": "required"
+        }
+      }
+    },
+    {
+      "id": "DOC-083",
+      "name": "VAT / tax-treatment supporting evidence",
+      "purposeGroup": "Tax and payments",
+      "applicabilityRoute": "VAT/exemption/going-concern treatment is claimed.",
+      "timing": "Before final tax determination.",
+      "reviewLimits": "Special tax review; do not infer VAT from seller/PIP. Preserve the source signature flag.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "Yes",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "conditional"
+        },
+        "transfer.auction": {
+          "kind": "conditional"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "conditional"
+        },
+        "transfer.property_in_possession": {
+          "kind": "conditional"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "conditional"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "conditional"
+        },
+        "transfer.donation": {
+          "kind": "conditional"
+        }
+      }
+    },
+    {
+      "id": "DOC-084",
+      "name": "Sheriff’s execution-transfer supporting pack",
+      "purposeGroup": "Auction and execution",
+      "applicabilityRoute": "Sheriff pack; Required for Sale in Execution.",
+      "timing": "Before lodgement.",
+      "reviewLimits": "Responsible legal reviewer confirms current court/registry completeness and sufficiency.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "New conversational timing decision approved by Dean, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "not_applicable"
+        },
+        "transfer.auction": {
+          "kind": "not_applicable"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "required"
+        },
+        "transfer.property_in_possession": {
+          "kind": "not_applicable"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "not_applicable"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "not_applicable"
+        },
+        "transfer.donation": {
+          "kind": "not_applicable"
+        }
+      }
+    },
+    {
+      "id": "DOC-085",
+      "name": "Bulk property / allocation / linked-matter schedule",
+      "purposeGroup": "Bulk transfer and registration",
+      "applicabilityRoute": "Bulk property/allocation/linked-matter schedule; Required for Bulk Transfer when multiple properties/shares are coordinated.",
+      "timing": "Before bulk drafting, tax and lodgement.",
+      "reviewLimits": "Review title, property/price allocation, linked matters and per-property clearances. Firm control, not a universal statutory document.",
+      "decisionStatus": "Approved applicability/timing/review",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "Yes",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "required"
+        },
+        "transfer.auction": {
+          "kind": "not_applicable"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "not_applicable"
+        },
+        "transfer.property_in_possession": {
+          "kind": "not_applicable"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "not_applicable"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "not_applicable"
+        },
+        "transfer.donation": {
+          "kind": "not_applicable"
+        }
+      }
+    },
+    {
+      "id": "DOC-086",
+      "name": "Court order for joint-estate division / regime change",
+      "purposeGroup": "Outside approved P0 groups",
+      "applicabilityRoute": "Outside P0.",
+      "timing": "No P0 due stage.",
+      "reviewLimits": "Section45bis court-order route remains outside P0; retain the source record separately.",
+      "decisionStatus": "Outside P0",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "Source-derived rule with explicit Dean clarification, 2026-10-06",
+      "signatureFlag": "No",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "outside_p0"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "outside_p0"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "outside_p0"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "outside_p0"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "outside_p0"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "outside_p0"
+        },
+        "transfer.auction": {
+          "kind": "outside_p0"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "outside_p0"
+        },
+        "transfer.property_in_possession": {
+          "kind": "outside_p0"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "outside_p0"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "outside_p0"
+        },
+        "transfer.donation": {
+          "kind": "outside_p0"
+        }
+      }
+    },
+    {
+      "id": "PROV-LEVY-CERT",
+      "name": "Body corporate levy clearance certificate",
+      "purposeGroup": "Clearances and compliance",
+      "applicabilityRoute": "Property is Sectional Title AND body corporate levy clearance applies.",
+      "timing": "Obtain and review before DOC-040 certification and sectional-transfer lodgement.",
+      "reviewLimits": "Additional document, not a rename of DOC-046. Its specific mapping intentionally differs from DOC-046; do not substitute the general DOC-046 tenure rule. Stable catalogue/engine identifier and signature requirement await numbering/schema review.",
+      "decisionStatus": "Approved new document; identifier provisional",
+      "approvedBy": "Dean",
+      "approvalDate": "2026-10-06",
+      "provenance": "New conversational document decision approved by Dean, 2026-10-06",
+      "signatureFlag": "Undecided for new document",
+      "levels": {
+        "transfer.private_treaty.not_applicable": {
+          "kind": "conditional"
+        },
+        "transfer.private_treaty.sectional_title_register": {
+          "kind": "required"
+        },
+        "transfer.private_treaty.township_register": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.extension_of_scheme": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.subdivision": {
+          "kind": "not_applicable"
+        },
+        "transfer.private_treaty.bulk_transfer": {
+          "kind": "optional"
+        },
+        "transfer.auction": {
+          "kind": "conditional"
+        },
+        "transfer.sale_in_execution": {
+          "kind": "conditional"
+        },
+        "transfer.property_in_possession": {
+          "kind": "conditional"
+        },
+        "transfer.deceased_estate_inheritance": {
+          "kind": "conditional"
+        },
+        "transfer.endorsement_section_45": {
+          "kind": "conditional"
+        },
+        "transfer.donation": {
+          "kind": "conditional"
+        }
+      }
+    }
+  ]
+}
