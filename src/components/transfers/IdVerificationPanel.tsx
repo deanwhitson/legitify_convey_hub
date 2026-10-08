@@ -3,6 +3,7 @@ import { Badge, Button, Card, CardContent } from '@/components/ui'
 import {
   IdVerificationApi,
   type IdVerificationSessionData,
+  type IdVerificationStatus,
   type IdVerificationStatusData,
 } from '@/lib/api/idVerification'
 import { ApiRequestError } from '@/lib/api/httpClient'
@@ -141,6 +142,9 @@ export const IdVerificationPanel: React.FC<IdVerificationPanelProps> = ({
 }) => {
   const [view, setView] = useState<ViewState>({ kind: 'loading' })
   const [busy, setBusy] = useState(false)
+  // Latest server status while the capture flow is mounted — refreshed
+  // silently so SDK progress messages never unmount the capture.
+  const [captureStatus, setCaptureStatus] = useState<IdVerificationStatus | null>(null)
   // Stale-response guard: bumped on subject change/unmount so an in-flight
   // read can never paint the previous subject's result.
   const generation = useRef(0)
@@ -215,6 +219,21 @@ export const IdVerificationPanel: React.FC<IdVerificationPanelProps> = ({
     return res.data.sdkToken
   }, [transferId, subjectPartyId])
 
+  // Progress-only refresh: fetches the server status without changing the
+  // view, so readiness/step messages keep the capture mounted. Only a
+  // deliberate settled/cancelled signal (or a real loadStatus call) leaves
+  // the capture view. A failed quiet read is swallowed — the capture stays
+  // usable and the next signal retries.
+  const refreshQuietly = useCallback(async () => {
+    const gen = generation.current
+    try {
+      const res = await IdVerificationApi.getStatus(transferId, subjectPartyId)
+      if (!stale(gen)) setCaptureStatus(res.data.status)
+    } catch {
+      /* stay mounted */
+    }
+  }, [transferId, subjectPartyId])
+
   const renderStatus = (data: IdVerificationStatusData) => (
     <IdVerificationStatusView
       data={data}
@@ -229,7 +248,7 @@ export const IdVerificationPanel: React.FC<IdVerificationPanelProps> = ({
     <div className="space-y-3">
       <div className="flex items-center gap-2">
         <Badge variant="secondary">
-          {STATUS_LABELS[session.status] ?? session.status}
+          {STATUS_LABELS[captureStatus ?? session.status] ?? (captureStatus ?? session.status)}
         </Badge>
         {session.simulated && (
           <Badge variant="secondary" className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200">
@@ -246,7 +265,9 @@ export const IdVerificationPanel: React.FC<IdVerificationPanelProps> = ({
         <SumsubCapture
           accessToken={session.sdkToken}
           expirationHandler={expirationHandler}
-          onProgress={() => loadStatus()}
+          onProgress={() => { void refreshQuietly() }}
+          onSettled={() => { void loadStatus() }}
+          onCancelled={() => { void loadStatus() }}
           onError={code => setView({ kind: 'error', message: `Capture failed: ${code}` })}
         />
       )}

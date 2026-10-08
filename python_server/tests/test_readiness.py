@@ -222,7 +222,7 @@ class ReadinessTests(unittest.IsolatedAsyncioTestCase):
         body = json.dumps(r)
         for bad in (SECRET, "db.example.internal", "connection refused", "host"):
             self.assertNotIn(bad, body)
-        self.assertEqual(expected_migration_count(), 27)
+        self.assertEqual(expected_migration_count(), 28)
 
 
 def _settings_stub():

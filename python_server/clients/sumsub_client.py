@@ -66,6 +66,10 @@ class ReviewStatus:
     review_reject_type: Optional[str]
     reject_labels: tuple
     level_name: Optional[str]
+    # Review-cycle identifiers — used to confirm an ambiguous event belongs
+    # to the attempt cycle it claims, never as status authority.
+    inspection_id: Optional[str] = None
+    attempt_id: Optional[str] = None
 
 
 class SumsubClient(Protocol):
@@ -148,17 +152,20 @@ class SumsubApiClient:
         return ApplicantRef(applicant_id=applicant_id, external_user_id=external_user_id)
 
     async def get_applicant_by_external_id(self, external_user_id: str) -> Optional[ApplicantRef]:
+        # docs.sumsub.com/reference/get-applicant-data-via-externaluserid
+        # (accessed 2026-10-08): the path ends in /one. A response without an
+        # applicant id is a malformed response, not a genuine not-found.
         from urllib.parse import quote
         try:
             data = await self._request(
                 "GET",
-                f"/resources/applicants/-;externalUserId={quote(external_user_id, safe='')}",
+                f"/resources/applicants/-;externalUserId={quote(external_user_id, safe='')}/one",
             )
         except SumsubNotFoundError:
             return None
         applicant_id = data.get("id") if isinstance(data, dict) else None
         if not isinstance(applicant_id, str) or not applicant_id:
-            return None
+            raise SumsubClientError("malformed_response")
         return ApplicantRef(applicant_id=applicant_id, external_user_id=external_user_id)
 
     async def create_sdk_access_token(self, user_id: str, level_name: str, ttl_seconds: int) -> SdkAccessToken:
@@ -185,14 +192,30 @@ class SumsubApiClient:
             review_reject_type=result.get("reviewRejectType"),
             reject_labels=tuple(result.get("rejectLabels") or ()),
             level_name=data.get("levelName"),
+            inspection_id=(
+                result.get("inspectionId")
+                if isinstance(result.get("inspectionId"), str)
+                else (data.get("inspectionId") if isinstance(data.get("inspectionId"), str) else None)
+            ),
+            attempt_id=data.get("attemptId") if isinstance(data.get("attemptId"), str) else None,
         )
+
+
+def fixture_applicant_id(external_user_id: str) -> str:
+    """Deterministic labelled fixture applicant id — mirrors the provider's
+    applicant reuse: every attempt cycle for the same external ref binds the
+    same applicant id."""
+    digest = hashlib.sha256(external_user_id.encode()).hexdigest()[:10]
+    return f"FIXTURE-APPLICANT-{digest}"
 
 
 class FixtureSumsubClient:
     """Synthetic provider for SUMSUB_MODE=fixture — no provider traffic.
 
     Produces labelled fake applicant ids and tokens. Status outcomes are
-    driven by the fixture webhook simulation, not by this client.
+    driven by the fixture webhook simulation, not by this client. Applicant
+    ids are deterministic per external ref — a new attempt cycle for the same
+    subject binds the same applicant, like the real provider.
     """
 
     def __init__(self) -> None:
@@ -202,9 +225,8 @@ class FixtureSumsubClient:
         return None
 
     async def create_applicant(self, external_user_id: str, level_name: str) -> ApplicantRef:
-        self._counter += 1
         return ApplicantRef(
-            applicant_id=f"FIXTURE-APPLICANT-{self._counter:04d}",
+            applicant_id=fixture_applicant_id(external_user_id),
             external_user_id=external_user_id,
         )
 

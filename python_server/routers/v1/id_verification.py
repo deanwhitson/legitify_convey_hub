@@ -190,7 +190,11 @@ async def get_id_verification_status(
         ai=user.accountable_institution_id,
         transfer_party_id=transfer_party_id,
     )
-    data.update(_subject_payload(subject_kind, on_behalf))
+    # The stored attempt binding is authoritative for the subject context;
+    # fall back to the request-derived kind only when no attempt exists.
+    data["subjectKind"] = data.get("subjectKind") or subject_kind
+    if data.get("onBehalfOfPartyId") is None and on_behalf is not None:
+        data.update(_subject_payload(subject_kind, on_behalf))
     return {"message": "OK", "data": data}
 
 
@@ -226,6 +230,7 @@ async def start_id_verification_session(
             transfer_id=id,
             transfer_party_id=transfer_party_id,
             subject_kind=subject_kind,
+            on_behalf_of_party_id=on_behalf_of,
         )
     except IdVerificationError as exc:
         return _error(exc)
@@ -280,6 +285,7 @@ async def retry_id_verification(
             transfer_id=id,
             transfer_party_id=transfer_party_id,
             subject_kind=subject_kind,
+            on_behalf_of_party_id=on_behalf_of,
         )
     except IdVerificationError as exc:
         return _error(exc)

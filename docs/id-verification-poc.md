@@ -26,9 +26,14 @@ manual). A company/trust party verifies through a *specifically selected*
 natural-person representative: the staff caller passes
 `onBehalfOfPartyId` (a company/trust `transfer_parties` row on the same
 transfer, same institution); the subject stays the person row in the path
-and the attempt records `subject_kind = 'representative'`. A non-person
-subject or a person `onBehalfOfPartyId` is rejected `422` — an entity is
-never verified as a passport holder.
+and the attempt records `subject_kind = 'representative'` together with the
+persisted `on_behalf_of_party_id`, which the status API returns on reload.
+A non-person subject or a person `onBehalfOfPartyId` is rejected `422` — an
+entity is never verified as a passport holder. Honest limitation: the
+codebase has no dedicated representative-authorisation domain contract, so
+the POC validates only that the selected representative is a person party on
+the same authorised transfer — it records individual verification *on
+behalf of* the entity and does not claim legal representative authority.
 
 **Identity inputs.** Institution comes from the verified JWT
 (`user.accountable_institution_id`), never from the payload. The provider
@@ -52,7 +57,18 @@ approved step and grants follow the deployment runbook):
   instead of duplicating provider applicants.
 - `id_verification_events` — append-only event ledger: dedupe key, attempt
   ref, event type, review fields, provider `createdAtMs`, received/processed
-  times. Raw webhook bodies are never stored — only allowlisted fields.
+  times, and an `applied` processing flag. Raw webhook bodies are never
+  stored — only allowlisted fields.
+
+Event receipt and attempt-state application are one atomic repository
+operation (`apply_event`): the durable implementation runs event INSERT +
+attempt UPDATE inside a single transaction; a post-insert failure rolls
+back the whole call, so a redelivery re-processes instead of folding onto a
+half-processed event. A previously received but unapplied event (`applied =
+false` path) is resumed and completed rather than treated as an ordinary
+duplicate; `duplicate` is acknowledged only after durable successful
+handling. Repository errors are translated into a sanitised retryable
+storage failure (503), never a silent loss.
 
 Repositories are dependency-injected: `InMemoryIdVerificationRepository` is
 allowed **only** in `SUMSUB_MODE=fixture` (clearly labelled, per-process);
@@ -152,6 +168,17 @@ across related events, so it cannot dedupe alone; identical redeliveries
 fold onto one event row (replay-safe), while distinct events of the same
 type on the same applicant are kept.
 
+**Attempt binding:** `externalUserId` alone is never sufficient
+authority. The resolver requires an exact applicantId match against the
+bound attempt (a mismatched applicantId is `unmatched` — never applied),
+then compares the event's provider `createdAtMs` to the attempt's
+`started_at`/`cycle_started_at`: older ⇒ `stale`; equal or missing ⇒
+ambiguous ⇒ provider-status reconcile, applied only when the reconcile
+answer agrees; reconcile failure ⇒ not applied. When the provider event
+carries a review-cycle id (`inspectionId`) it must match the attempt's
+recorded `provider_review_id` — a prior-cycle event delivered after a new
+attempt starts cannot verify the new cycle.
+
 **Ordering/staleness:** each applied event records its `createdAtMs`. An
 event older than the last applied event cannot regress the status — it is
 stored as `out_of_order` and, in provider modes, a status reconcile call is
@@ -177,15 +204,23 @@ FastAPI (`/api/v1`):
   WebSDK expiry callback).
 - `POST .../id-verification/retry` — staff `transfers:write`; only valid
   from `retry_requested`/`declined`/`not_started`; starts a new attempt
-  cycle (attempt_no+1).
+  cycle (attempt_no+1). Start/retry eligibility is enforced server-side:
+  an open attempt resumes, a verified attempt refuses with `not_retryable`
+  (a new attempt is never silently created after verified), and retry from
+  a non-retryable status is refused.
 - `POST /api/v1/webhooks/sumsub` — no JWT; provider HMAC only. Body cap
   64 KiB. Responses: `200` handled/duplicate/unmatched/test-mode/out-of-order;
   `503` on storage failure (never acknowledged before durable — provider
   retries), `401` invalid/missing signature or unsupported algorithm,
   `400` malformed/oversized/environment-mismatched payload.
 - `POST /api/v1/webhooks/sumsub-fixture` — **fixture mode only** (404 in
-  every other mode): injects a labelled synthetic event through the same
-  dedupe/ordering/apply path so the offline demo exercises real code.
+  every other mode), and inside fixture mode still restricted to an
+  authorised local demo boundary: loopback client host plus the
+  `X-Dev-Fixture: 1` request header; anything else is 404. Enabling fixture
+  mode on a reachable host therefore does not create a general
+  unauthenticated status injector. The route injects a labelled synthetic
+  event through the same dedupe/binding/apply path so the offline demo
+  exercises real code.
 - `GET /api/v1/id-verification/provider-status` is NOT a route — server-side
   reconcile happens inside the service (authenticated GET applicant status),
   not via a browser-callable endpoint.
@@ -265,13 +300,35 @@ $env:PORT='3000'; $env:DEEDLY_API_BASE_URL='http://localhost:3100'; npm run dev:
 #  -> "Start verification" shows the labelled simulated session.
 # Inject a synthetic outcome through the same apply path the real webhook uses:
 curl -X POST http://localhost:3100/api/v1/webhooks/sumsub-fixture `
-  -H 'Content-Type: application/json' `
+  -H 'Content-Type: application/json' -H 'X-Dev-Fixture: 1' `
   -d '{"type":"applicantReviewed","applicantId":"FIXTURE-APPLICANT-0001","externalUserId":"<from the session attempt>","createdAtMs":"2026-10-08 10:00:00.000","reviewResult":{"reviewAnswer":"GREEN"}}'
 # "Refresh status" in the panel then shows Verified + Simulated.
 ```
 
 The subject's opaque `externalUserId` is logged nowhere; obtain it for the
 demo from the attempt row (or from `build_external_ref(env, ai, party_id)`).
+
+### Integrated demo harness (no servers, no auth, no DB)
+
+`src/idv-harness/` builds a standalone synthetic demo that mounts the **real**
+`IdVerificationEntry` component (the same code `StepParties` renders) over a
+labelled in-page mock backend (`mockBackend.ts`) and a mocked
+`@sumsub/websdk-react` module (`mockWebSdk.tsx`, aliased only in
+`vite.config.idv.ts`). It exercises entry, panel, capture mount, SDK message
+lifecycle, refresh, event→status, reload persistence, subject switching,
+representative selection and narrow layouts — with zero network traffic and
+no JWT/tenant simulation (the in-page backend stands in for the whole
+server; it does not relax the real authz path, which the backend suite
+covers separately).
+
+```powershell
+npx vite build --config vite.config.idv.ts   # -> dist-idv/
+node scripts/idv-harness-check.mjs           # serve + Playwright checks
+```
+
+Driver hooks (`window.__idv`, `window.__sdkEmit/__sdkExpire`) exist only in
+the harness bundle — they are the harness's synthetic controls, equivalent
+to the fixture webhook role.
 
 ## 9. Team demo script + results template
 
@@ -305,11 +362,46 @@ Results template:
 | Evidence location | screenshot/log path (no secrets) |
 | Limitation | what this run does NOT prove |
 
-## 10. What this does and does not claim
+## 10. Verification results (this branch)
+
+All offline; Node 24.x, Python 3.12, Playwright/Chromium.
+
+| Suite | Command | Result |
+|---|---|---|
+| Python id-verification + readiness | `python -m unittest tests.test_id_verification tests.test_readiness` (from `python_server/`) | 80 run, **80 pass**, 1 skipped — the durable-Postgres `apply_event` integration class is opt-in under `TEST_DATABASE_URL` and was skipped (no disposable DB configured); durable DB coverage is therefore NOT claimed |
+| Frontend id-verification | `npx tsx --test src/components/transfers/IdVerificationPanel.test.tsx src/lib/api/idVerification.test.ts` | **11/11 pass** |
+| BFF party/matter proxies | `npx tsx --test server/tests/v1MatterParties.test.ts server/tests/v1MatterEditing.test.ts` | **24/24 pass** |
+| Mounted browser harness | `npx vite build --config vite.config.idv.ts` + `node scripts/idv-harness-check.mjs` | **18/18 checks pass** — entry from party card, capture stays mounted through readiness/step/progress messages, token-expiry refresh keeps capture alive, completion/cancel exit to status, event→status, reload persistence, subject switching, representative panel, fixture-simulated capture, 390px layout; 0 external requests, 0 page errors |
+| Typecheck | `npx tsc --noEmit` | clean |
+| App build | `npm run build` | clean |
+| Whitespace | `git diff --check` | clean |
+
+Pre-existing suite note: full `unittest discover` on this base has ~119
+`Settings(...)` TypeErrors in modules untouched by this branch
+(`db_ssl_ca_file`/`db_ssl_no_verify` fields predate the POC on `main`) —
+verified identical on the pristine base commit. `test_readiness`'s
+migration-count assertion was updated 27→28 for the registered migration
+030.
+
+Review-fix regressions covered in `tests/test_id_verification.py`: durable
+event insert contract (id/datetime/sanitised errors), post-insert failure
+→ resumable replay → applied (fault injection), concurrent events on one
+attempt, cross-attempt/previous-cycle/mismatched-applicant/old/equal/
+missing-timestamp event binding, reconcile-failure-not-applied, `/one`
+lookup path + signing input + create/404/conflict/ambiguous-recovery,
+`on_behalf_of_party_id` persistence + reload/switch, fixture-route
+loopback+header boundary, server-side start/retry transition policy
+(verified/started/pending/retry_requested/declined/review_required/
+no-open-attempt).
+
+## 11. What this does and does not claim
 
 - **Local UI/backend feasibility** — demonstrated offline: authz, subject
-  binding, session lifecycle, webhook crypto/dedupe/ordering, status mapping,
-  stale-state guards, fixture/sandbox separation.
+  binding, session lifecycle, webhook crypto/dedupe/ordering/atomic apply,
+  attempt/event binding (applicantId + review-cycle + timestamps +
+  reconcile), status mapping, stale-state guards, fixture/sandbox
+  separation, and the mounted capture lifecycle (WebSDK progress messages
+  keep capture mounted; only deliberate completion/cancel exits).
 - **Sandbox integration correctness** — NOT demonstrated: requires the
   deferred Sumsub account, credentials, a durable DB with migration 030 and
   public webhook ingress.
@@ -321,7 +413,7 @@ Results template:
   OCR/MRZ checks, chip reading and cryptographic chip/signature
   authentication are not equivalent.
 
-## 11. Cost note (provider figures, accessed 2026-10-08)
+## 12. Cost note (provider figures, accessed 2026-10-08)
 
 Public pricing listed a 14-day trial with 50 free checks; Basic
 $1.35/verification with a $149 monthly minimum; Compliance $1.85 with a $299

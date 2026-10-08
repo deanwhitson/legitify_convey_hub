@@ -18,7 +18,7 @@ import sys
 import time
 import unittest
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, patch
 
 import jwt as pyjwt
@@ -39,7 +39,16 @@ from services.id_verification_service import (
     VerificationContext,
     build_external_ref,
 )
-from clients.sumsub_client import FixtureSumsubClient, SumsubApiClient
+from clients.sumsub_client import (
+    FixtureSumsubClient,
+    SumsubApiClient,
+    SumsubClientError,
+    fixture_applicant_id,
+)
+from services.id_verification_service import (
+    ReconcilePendingError,
+    apply_webhook_event,
+)
 
 TEST_JWT_SECRET = "test-jwt-secret-32-bytes-long!!"
 AI = 5
@@ -105,7 +114,7 @@ def _fixture_event(ext_ref, etype="applicantReviewed", *,
                    ms="2026-10-08 10:00:00.000", review=None):
     event = {
         "type": etype,
-        "applicantId": "FIXTURE-APPLICANT-0001",
+        "applicantId": fixture_applicant_id(ext_ref),
         "externalUserId": ext_ref,
         "correlationId": f"corr-{uuid.uuid4()}",
         "createdAtMs": ms,
@@ -271,7 +280,10 @@ class IdVerificationRouteTests(unittest.TestCase):
     def test_status_reflects_verified_fixture_event(self):
         self.client.post(self._path(suffix="/session"), json={}, headers=_auth())
         ext_ref = build_external_ref("fixture", AI, PERSON_PARTY_ID)
-        event = _fixture_event(ext_ref, review={"reviewAnswer": "GREEN"})
+        attempt = list(self.ctx.repository._attempts.values())[0]
+        created = datetime.fromisoformat(attempt["created_at"])
+        ms = (created + timedelta(seconds=60)).strftime("%Y-%m-%d %H:%M:%S.000")
+        event = _fixture_event(ext_ref, ms=ms, review={"reviewAnswer": "GREEN"})
         w = self.client.post("/api/v1/webhooks/sumsub-fixture", json=event)
         self.assertEqual(w.status_code, 200)
         r = self.client.get(self._path(), headers=_auth())
@@ -289,9 +301,63 @@ class IdVerificationRouteTests(unittest.TestCase):
         )
         self.assertEqual(r.status_code, 404)
 
+    def test_start_after_verified_rejected(self):
+        # The public start path enforces the retry state policy server-side —
+        # a verified attempt cannot silently open a new cycle.
+        self.client.post(self._path(suffix="/session"), json={}, headers=_auth())
+        ext_ref = build_external_ref("fixture", AI, PERSON_PARTY_ID)
+        attempt = list(self.ctx.repository._attempts.values())[0]
+        created = datetime.fromisoformat(attempt["created_at"])
+        ms = (created + timedelta(seconds=60)).strftime("%Y-%m-%d %H:%M:%S.000")
+        self.client.post(
+            "/api/v1/webhooks/sumsub-fixture",
+            json=_fixture_event(ext_ref, ms=ms, review={"reviewAnswer": "GREEN"}),
+        )
+        r = self.client.post(self._path(suffix="/session"), json={}, headers=_auth())
+        self.assertEqual(r.status_code, 409)
+        self.assertEqual(r.json()["error"], "not_retryable")
+
+    def test_get_status_returns_stored_representative_binding(self):
+        # onBehalfOfPartyId is persisted on the attempt — a status read
+        # reports the recorded binding, not a reconstructed one.
+        self.client.post(
+            self._path(suffix="/session"),
+            json={"onBehalfOfPartyId": COMPANY_PARTY_ID},
+            headers=_auth(),
+        )
+        r = self.client.get(self._path(), headers=_auth())
+        data = r.json()["data"]
+        self.assertEqual(data["subjectKind"], "representative")
+        self.assertEqual(data["onBehalfOfPartyId"], COMPANY_PARTY_ID)
+
+    def test_fixture_webhook_denies_non_local_client(self):
+        # The fixture receiver is a loopback-only demo boundary — a remote
+        # caller gets 404 exactly as in every other mode.
+        remote = TestClient(app, client=("203.0.113.9", 4444)).__enter__()
+        try:
+            r = remote.post(
+                "/api/v1/webhooks/sumsub-fixture",
+                json={"type": "applicantReviewed"},
+            )
+            self.assertEqual(r.status_code, 404)
+        finally:
+            remote.__exit__(None, None, None)
+            # The remote client's lifespan teardown nulled the shared
+            # app.state.entities_client — restore it so the outer client's
+            # teardown can close cleanly.
+            app.state.entities_client = AsyncMock()
+
+    def test_fixture_webhook_loopback_allowed(self):
+        r = self.client.post(
+            "/api/v1/webhooks/sumsub-fixture",
+            json={"type": "applicantCreated", "createdAtMs": "2026-10-08 10:00:00.000"},
+        )
+        self.assertEqual(r.status_code, 200)
+
 
 class _FailingRepo(InMemoryIdVerificationRepository):
-    async def insert_event(self, event, *, connection=None):
+    async def apply_event(self, event, *, attempt_id=None, fields=None,
+                          incoming_ts=None, mark_processed=True):
         raise StorageUnavailableError("db down")
 
 
@@ -357,8 +423,12 @@ class SumsubWebhookCryptoTests(unittest.TestCase):
             "provider": "sumsub",
             "provider_applicant_id": "app-1",
             "level_name": "idv-poc-level",
+            "inspection_id": None,
+            "on_behalf_of_party_id": None,
             "status": "started",
             "simulated": False,
+            "created_at": "2026-10-08T09:00:00+00:00",
+            "updated_at": "2026-10-08T09:00:00+00:00",
         }
         asyncio.run(
             self.repo.create_attempt(attempt)
@@ -627,6 +697,593 @@ class SumsubClientSigningTests(unittest.TestCase):
             )
         self.assertNotIn("sbx:token", str(cm.exception))
         self.assertNotIn("test-app-secret", repr(cm.exception))
+
+
+
+
+class WebhookApplySemanticsTests(unittest.TestCase):
+    """F2/F3 regressions: atomic apply, resumable events, cycle binding,
+    applicant cross-checks and reconcile-on-ambiguity."""
+
+    def setUp(self):
+        self.config = IdVerificationConfig(
+            mode="sandbox", environment="sandbox", webhook_secret="s",
+        )
+        self.repo = InMemoryIdVerificationRepository()
+        self.ctx = VerificationContext(self.config, self.repo, FixtureSumsubClient())
+        self.ext_ref = build_external_ref("sandbox", AI, PERSON_PARTY_ID)
+
+    def _mk_attempt(self, no=1, status="started", applicant="app-1",
+                    created="2026-10-08T09:00:00+00:00", insp=None,
+                    last_ms=None):
+        import asyncio
+        attempt = {
+            "id": str(uuid.uuid4()),
+            "environment": "sandbox",
+            "accountable_institution_id": AI,
+            "transfer_id": TRANSFER_ID,
+            "transfer_party_id": PERSON_PARTY_ID,
+            "subject_kind": "party",
+            "on_behalf_of_party_id": None,
+            "attempt_no": no,
+            "external_ref": self.ext_ref,
+            "provider": "sumsub",
+            "provider_applicant_id": applicant,
+            "level_name": "idv-poc-level",
+            "inspection_id": insp,
+            "status": status,
+            "simulated": False,
+            "last_event_created_at_ms": last_ms,
+            "created_at": created,
+            "updated_at": created,
+        }
+        return asyncio.run(self.repo.create_attempt(attempt))
+
+    def _ev(self, etype="applicantReviewed", *, ms="2026-10-08 10:00:00.000",
+            applicant="app-1", ext_ref=None, review=None, insp=None):
+        e = {
+            "type": etype,
+            "applicantId": applicant,
+            "externalUserId": ext_ref if ext_ref is not None else self.ext_ref,
+            "correlationId": f"corr-{uuid.uuid4()}",
+            "createdAtMs": ms,
+            "sandboxMode": True,
+        }
+        if review is not None:
+            e["reviewResult"] = review
+        if insp is not None:
+            e["inspectionId"] = insp
+        return e
+
+    def _apply(self, event):
+        import asyncio
+        return asyncio.run(apply_webhook_event(self.ctx, event))
+
+    def _attempts(self):
+        return list(self.repo._attempts.values())
+
+    # --- F2: atomicity / resumable handling ---------------------------------
+
+    def test_failed_apply_rolls_back_and_replay_applies(self):
+        self._mk_attempt()
+
+        class FailOnce(InMemoryIdVerificationRepository):
+            def __init__(self, inner):
+                super().__init__()
+                self.__dict__.update(inner.__dict__)
+                self.failed = False
+
+            def _apply_fields(self, attempt, fields):
+                if not self.failed:
+                    self.failed = True
+                    raise StorageUnavailableError("injected update failure")
+                return super()._apply_fields(attempt, fields)
+
+        self.ctx.repository = FailOnce(self.repo)
+        event = self._ev(review={"reviewAnswer": "GREEN"})
+        with self.assertRaises(StorageUnavailableError):
+            self._apply(event)
+        # Nothing durably recorded — the insert rolled back with the update.
+        self.assertEqual(len(self.repo._events), 0)
+        self.assertEqual(self._attempts()[0]["status"], "started")
+        out = self._apply(event)
+        self.assertEqual(out["result"], "applied")
+        self.assertEqual(self._attempts()[0]["status"], "verified")
+
+    def test_unprocessed_event_resumes_on_redelivery(self):
+        attempt = self._mk_attempt()
+        event = self._ev(review={"reviewAnswer": "GREEN"})
+        import asyncio
+        # Simulate an event row that was recorded but never durably applied
+        # (processed_at NULL) — the exact state a crashed apply leaves behind
+        # when the insert itself committed.
+        from repositories.id_verification import event_dedupe_key
+        asyncio.run(self.repo.apply_event(
+            {
+                "id": str(uuid.uuid4()),
+                "attempt_id": attempt["id"],
+                "environment": "sandbox",
+                "dedupe_key": event_dedupe_key(
+                    "sandbox", event["type"], event["applicantId"],
+                    event.get("correlationId"), event.get("reviewStatus"),
+                    event["reviewResult"]["reviewAnswer"], event["createdAtMs"],
+                ),
+                "event_type": event["type"],
+                "provider_applicant_id": event["applicantId"],
+                "external_ref": event["externalUserId"],
+                "correlation_id": event["correlationId"],
+                "level_name": None,
+                "inspection_id": None,
+                "review_status": None,
+                "review_answer": "GREEN",
+                "review_reject_type": None,
+                "reject_labels": [],
+                "provider_created_at_ms": event["createdAtMs"],
+                "received_at": datetime.now(timezone.utc),
+                "processed_at": None,
+                "disposition": "matched",
+            },
+            attempt_id=None, fields=None, incoming_ts=None,
+            mark_processed=False,
+        ))
+        out = self._apply(event)
+        # Not a false "duplicate" — the unfinished event resumed and applied.
+        self.assertEqual(out["result"], "applied")
+        self.assertEqual(self._attempts()[0]["status"], "verified")
+        self.assertEqual(len(self.repo._events), 1)
+
+    def test_concurrent_events_serialise_without_regression(self):
+        import asyncio
+        self._mk_attempt()
+        green = self._ev(ms="2026-10-08 10:05:00.000",
+                         review={"reviewAnswer": "GREEN"})
+        red = self._ev(ms="2026-10-08 10:00:00.000",
+                       review={"reviewAnswer": "RED", "reviewRejectType": "FINAL"})
+
+        async def both():
+            return await asyncio.gather(
+                apply_webhook_event(self.ctx, green),
+                apply_webhook_event(self.ctx, red),
+            )
+
+        results = asyncio.run(both())
+        outcomes = sorted(r["result"] for r in results)
+        # One wins, one is out-of-order — never an overwrite of newer state.
+        self.assertEqual(outcomes, ["applied", "stale_ignored"])
+        self.assertEqual(self._attempts()[0]["status"], "verified")
+
+    # --- F3: binding / cycle separation --------------------------------------
+
+    def test_applicant_mismatch_on_known_ref_never_applies(self):
+        self._mk_attempt()
+        event = self._ev(applicant="app-stranger",
+                         review={"reviewAnswer": "GREEN"})
+        out = self._apply(event)
+        self.assertEqual(out["disposition"], "binding_mismatch")
+        self.assertEqual(self._attempts()[0]["status"], "started")
+
+    def test_previous_cycle_event_cannot_verify_new_attempt(self):
+        # Reviewer repro: attempt 1 got RED/RETRY at 10:01; a new cycle
+        # opened at 10:02; a delayed GREEN for cycle 1 (10:00:30) arrives.
+        self._mk_attempt(no=1, status="retry_requested", insp="insp-1",
+                         last_ms="2026-10-08 10:01:00.000")
+        self._mk_attempt(no=2, status="started",
+                         created="2026-10-08T10:02:00+00:00")
+        event = self._ev(ms="2026-10-08 10:00:30.000",
+                         review={"reviewAnswer": "GREEN"})
+        out = self._apply(event)
+        self.assertEqual(out["disposition"], "previous_cycle")
+        attempts = {a["attempt_no"]: a for a in self._attempts()}
+        self.assertEqual(attempts[2]["status"], "started")
+        self.assertEqual(attempts[1]["status"], "retry_requested")
+
+    def test_inspection_id_routes_event_to_owning_cycle(self):
+        self._mk_attempt(no=1, status="retry_requested", insp="insp-1",
+                         last_ms="2026-10-08 10:01:00.000")
+        self._mk_attempt(no=2, status="started",
+                         created="2026-10-08T10:02:00+00:00")
+        # A legitimately delayed verdict for cycle 1 newer than its last event.
+        event = self._ev(ms="2026-10-08 10:03:00.000", insp="insp-1",
+                         review={"reviewAnswer": "GREEN"})
+        out = self._apply(event)
+        self.assertEqual(out["result"], "applied")
+        attempts = {a["attempt_no"]: a for a in self._attempts()}
+        self.assertEqual(attempts[1]["status"], "verified")
+        # The open cycle is untouched by the previous cycle's verdict.
+        self.assertEqual(attempts[2]["status"], "started")
+
+    def test_unknown_cycle_id_with_prior_cycles_needs_reconcile(self):
+        # Prior bound cycle exists; an event claims an unseen inspection id —
+        # ambiguous, so the fixture (no provider) cannot apply it.
+        self._mk_attempt(no=1, status="retry_requested", insp="insp-1",
+                         last_ms="2026-10-08 10:01:00.000")
+        self._mk_attempt(no=2, status="started",
+                         created="2026-10-08T10:02:00+00:00")
+        event = self._ev(ms="2026-10-08 10:05:00.000", insp="insp-2",
+                         review={"reviewAnswer": "GREEN"})
+        out = self._apply(event)
+        self.assertEqual(out["result"], "ambiguous_not_applied")
+        attempts = {a["attempt_no"]: a for a in self._attempts()}
+        self.assertEqual(attempts[2]["status"], "started")
+
+    # --- reconcile on ambiguity ----------------------------------------------
+
+    def test_equal_timestamp_reconciles_against_provider(self):
+        import httpx
+        self._mk_attempt(last_ms="2026-10-08 10:00:00.000")
+        captured = {}
+
+        def handler(request):
+            captured["path"] = request.url.path
+            return httpx.Response(200, json={
+                "reviewStatus": "completed",
+                "reviewResult": {"reviewAnswer": "GREEN"},
+            })
+
+        self.ctx.client = SumsubApiClient(
+            IdVerificationConfig(
+                mode="sandbox", environment="sandbox",
+                app_token="t", app_secret="s",
+                base_url="https://api.sumsub.com",
+            ),
+            transport=httpx.MockTransport(handler),
+        )
+        event = self._ev(ms="2026-10-08 10:00:00.000",
+                         review={"reviewAnswer": "GREEN"})
+        out = self._apply(event)
+        self.assertEqual(out["result"], "applied")
+        self.assertEqual(self._attempts()[0]["status"], "verified")
+        self.assertEqual(captured["path"], "/resources/applicants/app-1/status")
+
+    def test_failed_reconcile_leaves_event_unprocessed(self):
+        import httpx
+        self._mk_attempt(last_ms="2026-10-08 10:00:00.000")
+
+        def bad(request):
+            return httpx.Response(500, json={})
+
+        self.ctx.client = SumsubApiClient(
+            IdVerificationConfig(
+                mode="sandbox", environment="sandbox",
+                app_token="t", app_secret="s", base_url="https://api.sumsub.com",
+            ),
+            transport=httpx.MockTransport(bad),
+        )
+        event = self._ev(ms="2026-10-08 10:00:00.000",
+                         review={"reviewAnswer": "GREEN"})
+        with self.assertRaises(ReconcilePendingError):
+            self._apply(event)
+        # Recorded but unprocessed — a redelivery resumes rather than being
+        # reported a false duplicate.
+        rows = list(self.repo._events.values())
+        self.assertEqual(len(rows), 1)
+        self.assertIsNone(rows[0]["processed_at"])
+        self.assertEqual(self._attempts()[0]["status"], "started")
+
+        def good(request):
+            return httpx.Response(200, json={
+                "reviewStatus": "completed",
+                "reviewResult": {"reviewAnswer": "GREEN"},
+            })
+
+        self.ctx.client = SumsubApiClient(
+            IdVerificationConfig(
+                mode="sandbox", environment="sandbox",
+                app_token="t", app_secret="s", base_url="https://api.sumsub.com",
+            ),
+            transport=httpx.MockTransport(good),
+        )
+        out = self._apply(event)
+        self.assertEqual(out["result"], "applied")
+        self.assertEqual(self._attempts()[0]["status"], "verified")
+
+    def test_fixture_ambiguous_event_never_applies(self):
+        # No provider to reconcile with — ambiguous stays unapplied.
+        self._mk_attempt(last_ms="2026-10-08 10:00:00.000")
+        event = self._ev(ms="2026-10-08 10:00:00.000",
+                         review={"reviewAnswer": "GREEN"})
+        out = self._apply(event)
+        self.assertEqual(out["result"], "ambiguous_not_applied")
+        self.assertEqual(self._attempts()[0]["status"], "started")
+
+
+class SumsubClientContractTests(unittest.TestCase):
+    """Exact provider paths + signing input + lookup/create recovery."""
+
+    def _config(self):
+        return IdVerificationConfig(
+            mode="sandbox", environment="sandbox",
+            app_token="sbx:token", app_secret="test-app-secret",
+            base_url="https://api.sumsub.com", level_name="idv-poc-level",
+        )
+
+    def test_external_lookup_uses_documented_one_path(self):
+        import asyncio
+        import httpx
+        from urllib.parse import quote
+        captured = {}
+
+        def handler(request):
+            captured["method"] = request.method
+            captured["path"] = request.url.path
+            captured["ts"] = request.headers["x-app-access-ts"]
+            captured["sig"] = request.headers["x-app-access-sig"]
+            return httpx.Response(200, json={"id": "app-9"})
+
+        ref = "dly-sandbox-abc123"
+        client = SumsubApiClient(
+            self._config(), transport=httpx.MockTransport(handler)
+        )
+        got = asyncio.run(client.get_applicant_by_external_id(ref))
+        expected_path = f"/resources/applicants/-;externalUserId={quote(ref, safe='')}/one"
+        self.assertEqual(captured["path"], expected_path)
+        self.assertEqual(got.applicant_id, "app-9")
+        expected_sig = hmac_mod.new(
+            b"test-app-secret",
+            captured["ts"].encode() + b"GET" + expected_path.encode() + b"",
+            hashlib.sha256,
+        ).hexdigest()
+        self.assertEqual(captured["sig"], expected_sig)
+
+    def test_external_lookup_404_is_not_found_not_error(self):
+        import asyncio
+        import httpx
+        client = SumsubApiClient(
+            self._config(),
+            transport=httpx.MockTransport(lambda r: httpx.Response(404, json={})),
+        )
+        got = asyncio.run(client.get_applicant_by_external_id("dly-x"))
+        self.assertIsNone(got)
+
+    def test_external_lookup_malformed_is_error_not_absence(self):
+        import asyncio
+        import httpx
+        client = SumsubApiClient(
+            self._config(),
+            transport=httpx.MockTransport(
+                lambda r: httpx.Response(200, json={"unexpected": True})
+            ),
+        )
+        with self.assertRaises(SumsubClientError) as cm:
+            asyncio.run(client.get_applicant_by_external_id("dly-x"))
+        self.assertEqual(cm.exception.code, "malformed_response")
+
+    def test_get_or_create_recovers_duplicate_create_conflict(self):
+        # Initial create conflict (e.g. a prior create timed out after the
+        # provider committed it) recovers via the documented lookup.
+        import asyncio
+        import httpx
+        from services.id_verification_service import start_or_resume_session
+        calls = []
+
+        def handler(request):
+            calls.append((request.method, request.url.path))
+            if request.method == "GET" and len(calls) == 1:
+                return httpx.Response(404, json={})
+            if request.method == "POST" and "applicants" in request.url.path:
+                return httpx.Response(409, json={})
+            if request.method == "GET":
+                return httpx.Response(200, json={"id": "app-existing"})
+            return httpx.Response(200, json={"token": "tok"})
+
+        ctx = VerificationContext(
+            IdVerificationConfig(mode="sandbox", environment="sandbox",
+                                 app_token="t", app_secret="s",
+                                 base_url="https://api.sumsub.com",
+                                 level_name="idv-poc-level"),
+            InMemoryIdVerificationRepository(),
+            SumsubApiClient(
+                IdVerificationConfig(mode="sandbox", environment="sandbox",
+                                     app_token="t", app_secret="s",
+                                     base_url="https://api.sumsub.com"),
+                transport=httpx.MockTransport(handler),
+            ),
+        )
+        session = asyncio.run(start_or_resume_session(
+            ctx, ai=AI, transfer_id=TRANSFER_ID,
+            transfer_party_id=PERSON_PARTY_ID, subject_kind="party",
+        ))
+        self.assertEqual(session["attemptNo"], 1)
+        attempt = list(ctx.repository._attempts.values())[0]
+        self.assertEqual(attempt["provider_applicant_id"], "app-existing")
+
+    def test_start_after_verified_rejected_service_level(self):
+        import asyncio
+        from services.id_verification_service import (
+            IdVerificationError,
+            start_or_resume_session,
+        )
+        repo = InMemoryIdVerificationRepository()
+        ctx = VerificationContext(
+            IdVerificationConfig(mode="fixture", environment="fixture"),
+            repo, FixtureSumsubClient(),
+        )
+        asyncio.run(start_or_resume_session(
+            ctx, ai=AI, transfer_id=TRANSFER_ID,
+            transfer_party_id=PERSON_PARTY_ID, subject_kind="party",
+        ))
+        attempt = list(repo._attempts.values())[0]
+        attempt["status"] = "verified"
+        with self.assertRaises(IdVerificationError) as cm:
+            asyncio.run(start_or_resume_session(
+                ctx, ai=AI, transfer_id=TRANSFER_ID,
+                transfer_party_id=PERSON_PARTY_ID, subject_kind="party",
+            ))
+        self.assertEqual(cm.exception.code, "not_retryable")
+
+
+class DurableRepositoryContractTests(unittest.TestCase):
+    """PostgresIdVerificationRepository against a disposable local DB —
+    opt-in via TEST_DATABASE_URL only; skipped cleanly otherwise."""
+
+    @classmethod
+    def setUpClass(cls):
+        import tests.db_test_utils as db_test_utils
+        db_test_utils.require_test_database()
+        cls._db = db_test_utils
+        import asyncio
+        asyncio.run(cls._apply_ddl())
+
+    @classmethod
+    async def _apply_ddl(cls):
+        import os
+        pool = await cls._db.get_test_pool()
+        path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+            "src", "lib", "migrations", "030_deedly_id_verification.sql",
+        )
+        sql = open(path, encoding="utf-8").read()
+        # Skip comment lines and the transaction wrapper — the pool already
+        # scopes search_path; each statement is applied individually.
+        statements = []
+        for chunk in sql.split(";"):
+            lines = [l for l in chunk.splitlines() if not l.strip().startswith("--")]
+            stmt = "\n".join(lines).strip()
+            if not stmt or stmt.upper() in ("BEGIN", "COMMIT") or stmt.upper().startswith("SET LOCAL"):
+                continue
+            statements.append(stmt)
+        async with pool.acquire() as conn:
+            for stmt in statements:
+                await conn.execute(stmt)
+            # FK constraints to transfers/transfer_parties need parent rows the
+            # scratch DB may not have — this repo-contract test drops them.
+            for constraint, table in (
+                ("id_verification_attempts_transfer_id_fkey", "id_verification_attempts"),
+                ("id_verification_attempts_transfer_party_id_fkey", "id_verification_attempts"),
+                ("id_verification_attempts_on_behalf_of_party_id_fkey", "id_verification_attempts"),
+                ("id_verification_events_attempt_id_fkey", "id_verification_events"),
+            ):
+                await conn.execute(
+                    f"ALTER TABLE transfers.{table} DROP CONSTRAINT IF EXISTS {constraint}"
+                )
+
+    def tearDown(self):
+        import asyncio
+        from db import query
+        asyncio.run(query("DELETE FROM id_verification_events"))
+        asyncio.run(query("DELETE FROM id_verification_attempts"))
+
+    def _repo(self):
+        from repositories.id_verification import PostgresIdVerificationRepository
+        return PostgresIdVerificationRepository()
+
+    def _attempt_row(self):
+        return {
+            "id": str(uuid.uuid4()),
+            "environment": "sandbox",
+            "accountable_institution_id": AI,
+            "transfer_id": str(uuid.uuid4()),
+            "transfer_party_id": str(uuid.uuid4()),
+            "subject_kind": "party",
+            "on_behalf_of_party_id": None,
+            "attempt_no": 1,
+            "external_ref": "dly-sandbox-durable1",
+            "provider": "sumsub",
+            "provider_applicant_id": "app-d1",
+            "level_name": "idv-poc-level",
+            "inspection_id": None,
+            "status": "started",
+            "simulated": False,
+        }
+
+    def _event_row(self, attempt_id):
+        from repositories.id_verification import event_dedupe_key
+        return {
+            "id": str(uuid.uuid4()),
+            "attempt_id": attempt_id,
+            "environment": "sandbox",
+            "dedupe_key": event_dedupe_key(
+                "sandbox", "applicantReviewed", "app-d1", "c1", None,
+                "GREEN", "2026-10-08 10:00:00.000",
+            ),
+            "event_type": "applicantReviewed",
+            "provider_applicant_id": "app-d1",
+            "external_ref": "dly-sandbox-durable1",
+            "correlation_id": "c1",
+            "level_name": None,
+            "inspection_id": None,
+            "review_status": None,
+            "review_answer": "GREEN",
+            "review_reject_type": None,
+            "reject_labels": [],
+            "provider_created_at_ms": "2026-10-08 10:00:00.000",
+            "received_at": datetime.now(timezone.utc),
+            "processed_at": None,
+            "disposition": "matched",
+        }
+
+    def test_create_attempt_and_atomic_apply(self):
+        import asyncio
+        repo = self._repo()
+        attempt = asyncio.run(repo.create_attempt(self._attempt_row()))
+        self.assertEqual(attempt["status"], "started")
+        fields = {"status": "verified", "last_event_created_at_ms": "2026-10-08 10:00:00.000"}
+        ts = datetime(2026, 10, 8, 10, 0, tzinfo=timezone.utc).timestamp()
+        out = asyncio.run(repo.apply_event(
+            self._event_row(attempt["id"]),
+            attempt_id=attempt["id"], fields=fields, incoming_ts=ts,
+        ))
+        self.assertEqual(out["outcome"], "applied")
+        latest = asyncio.run(repo.get_latest_attempt(
+            "sandbox", AI, attempt["transfer_party_id"]
+        ))
+        self.assertEqual(latest["status"], "verified")
+        # Identical redelivery → harmless duplicate.
+        out2 = asyncio.run(repo.apply_event(
+            self._event_row(attempt["id"]),
+            attempt_id=attempt["id"], fields=fields, incoming_ts=ts,
+        ))
+        self.assertEqual(out2["outcome"], "duplicate")
+
+    def test_failed_update_rolls_back_insert_and_replay_applies(self):
+        import asyncio
+        import db
+        repo = self._repo()
+        attempt = asyncio.run(repo.create_attempt(self._attempt_row()))
+        fields = {"status": "verified", "last_event_created_at_ms": "2026-10-08 10:00:00.000"}
+        ts = datetime(2026, 10, 8, 10, 0, tzinfo=timezone.utc).timestamp()
+        event = self._event_row(attempt["id"])
+
+        real_query = db.query
+
+        async def flaky(text, params=None, *, connection=None):
+            if "UPDATE id_verification_attempts" in text:
+                raise RuntimeError("injected update failure")
+            return await real_query(text, params, connection=connection)
+
+        with patch("repositories.id_verification.db") as mockdb:
+            mockdb.query = flaky
+            mockdb.with_transaction = db.with_transaction
+            with self.assertRaises(StorageUnavailableError):
+                asyncio.run(repo.apply_event(
+                    event, attempt_id=attempt["id"], fields=fields, incoming_ts=ts,
+                ))
+        # Rolled back — no half-recorded event.
+        events = asyncio.run(repo.list_events_for_attempt(attempt["id"]))
+        self.assertEqual(len(events), 0)
+        out = asyncio.run(repo.apply_event(
+            event, attempt_id=attempt["id"], fields=fields, incoming_ts=ts,
+        ))
+        self.assertEqual(out["outcome"], "applied")
+
+    def test_unprocessed_event_resumes(self):
+        import asyncio
+        repo = self._repo()
+        attempt = asyncio.run(repo.create_attempt(self._attempt_row()))
+        fields = {"status": "verified", "last_event_created_at_ms": "2026-10-08 10:00:00.000"}
+        ts = datetime(2026, 10, 8, 10, 0, tzinfo=timezone.utc).timestamp()
+        event = self._event_row(attempt["id"])
+        asyncio.run(repo.apply_event(
+            event, attempt_id=None, fields=None, incoming_ts=ts, mark_processed=False,
+        ))
+        out = asyncio.run(repo.apply_event(
+            event, attempt_id=attempt["id"], fields=fields, incoming_ts=ts,
+        ))
+        self.assertEqual(out["outcome"], "applied")
+        latest = asyncio.run(repo.get_latest_attempt(
+            "sandbox", AI, attempt["transfer_party_id"]
+        ))
+        self.assertEqual(latest["status"], "verified")
 
 
 if __name__ == "__main__":

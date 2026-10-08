@@ -42,12 +42,12 @@ class AttemptRepository(Protocol):
     async def get_attempt(self, environment: str, ai: int, transfer_party_id: str, attempt_no: int) -> Optional[dict]: ...
     async def get_open_attempt(self, environment: str, ai: int, transfer_party_id: str) -> Optional[dict]: ...
     async def get_latest_attempt(self, environment: str, ai: int, transfer_party_id: str) -> Optional[dict]: ...
-    async def find_attempt_by_external_ref(self, environment: str, external_ref: str) -> Optional[dict]: ...
-    async def find_attempt_by_applicant_id(self, environment: str, applicant_id: str) -> Optional[dict]: ...
+    async def list_attempts_by_external_ref(self, environment: str, external_ref: str) -> List[dict]: ...
+    async def list_attempts_by_applicant_id(self, environment: str, applicant_id: str) -> List[dict]: ...
     async def create_attempt(self, attempt: dict) -> dict: ...
     async def update_attempt_fields(self, attempt_id: str, fields: dict) -> dict: ...
-    async def insert_event(self, event: dict) -> Optional[dict]:
-        """Insert if the dedupe key is new; return (row, inserted) via dict flag."""
+    async def apply_event(self, event: dict, *, attempt_id: Optional[str], fields: Optional[dict], incoming_ts: Optional[float], mark_processed: bool = True) -> dict:
+        """Atomic event receipt + state application. See implementations."""
         ...
     async def list_events_for_attempt(self, attempt_id: str) -> List[dict]: ...
 
@@ -70,8 +70,9 @@ def event_dedupe_key(environment: str, event_type: str, applicant_id: str,
 
 _ATTEMPT_COLUMNS = (
     "id", "environment", "accountable_institution_id", "transfer_id",
-    "transfer_party_id", "subject_kind", "attempt_no", "external_ref",
-    "provider", "provider_applicant_id", "level_name", "status",
+    "transfer_party_id", "subject_kind", "on_behalf_of_party_id", "attempt_no",
+    "external_ref", "provider", "provider_applicant_id", "level_name",
+    "inspection_id", "status",
     "review_answer", "review_reject_type", "reject_labels",
     "last_correlation_id", "last_event_created_at_ms", "last_event_type",
     "simulated", "created_at", "updated_at",
@@ -80,18 +81,39 @@ _ATTEMPT_COLUMNS = (
 _EVENT_COLUMNS = (
     "id", "attempt_id", "environment", "dedupe_key", "event_type",
     "provider_applicant_id", "external_ref", "correlation_id", "level_name",
-    "review_status", "review_answer", "review_reject_type", "reject_labels",
-    "provider_created_at_ms", "received_at", "processed_at", "disposition",
+    "inspection_id", "review_status", "review_answer", "review_reject_type",
+    "reject_labels", "provider_created_at_ms", "received_at", "processed_at",
+    "disposition",
 )
 
 
 def _row_to_dict(row: Any) -> dict:
     d = dict(row)
+    for k, v in d.items():
+        if isinstance(v, uuid.UUID):
+            d[k] = str(v)
     for k in ("created_at", "updated_at", "received_at", "processed_at"):
         v = d.get(k)
         if isinstance(v, datetime):
             d[k] = v.isoformat()
     return d
+
+
+def _storage_failure(exc: Exception) -> StorageUnavailableError:
+    """Sanitised storage failure — never carries SQL or parameter detail."""
+    return StorageUnavailableError("verification storage operation failed")
+
+
+def _ms_ts(raw: Any) -> Optional[float]:
+    """Parse the provider's 'yyyy-MM-dd HH:mm:ss.fff' UTC timestamp."""
+    if not isinstance(raw, str):
+        return None
+    for fmt in ("%Y-%m-%d %H:%M:%S.%f", "%Y-%m-%d %H:%M:%S"):
+        try:
+            return datetime.strptime(raw, fmt).replace(tzinfo=timezone.utc).timestamp()
+        except ValueError:
+            continue
+    return None
 
 
 class PostgresIdVerificationRepository:
@@ -127,17 +149,17 @@ class PostgresIdVerificationRepository:
             [environment, ai, transfer_party_id], connection,
         )
 
-    async def find_attempt_by_external_ref(self, environment, external_ref, *, connection=None):
-        return await self._fetch(
+    async def list_attempts_by_external_ref(self, environment, external_ref, *, connection=None):
+        return await self._fetch_all(
             f"SELECT {', '.join(_ATTEMPT_COLUMNS)} FROM id_verification_attempts "
-            "WHERE environment=$1 AND external_ref=$2 ORDER BY attempt_no DESC LIMIT 1",
+            "WHERE environment=$1 AND external_ref=$2 ORDER BY attempt_no DESC",
             [environment, external_ref], connection,
         )
 
-    async def find_attempt_by_applicant_id(self, environment, applicant_id, *, connection=None):
-        return await self._fetch(
+    async def list_attempts_by_applicant_id(self, environment, applicant_id, *, connection=None):
+        return await self._fetch_all(
             f"SELECT {', '.join(_ATTEMPT_COLUMNS)} FROM id_verification_attempts "
-            "WHERE environment=$1 AND provider_applicant_id=$2 ORDER BY attempt_no DESC LIMIT 1",
+            "WHERE environment=$1 AND provider_applicant_id=$2 ORDER BY attempt_no DESC",
             [environment, applicant_id], connection,
         )
 
@@ -154,7 +176,7 @@ class PostgresIdVerificationRepository:
             name = type(exc).__name__
             if "UniqueViolation" in name:
                 raise AttemptConflictError("attempt already exists") from exc
-            raise
+            raise _storage_failure(exc) from exc
         return _row_to_dict(result.rows[0])
 
     async def update_attempt_fields(self, attempt_id, fields: dict, *, connection=None) -> dict:
@@ -163,33 +185,96 @@ class PostgresIdVerificationRepository:
             f"UPDATE id_verification_attempts SET {sets}, updated_at = now() "
             f"WHERE id = $1 RETURNING {', '.join(_ATTEMPT_COLUMNS)}"
         )
-        result = await db.query(sql, [attempt_id, *fields.values()], connection=connection)
+        try:
+            result = await db.query(sql, [attempt_id, *fields.values()], connection=connection)
+        except Exception as exc:
+            raise _storage_failure(exc) from exc
         if not result.rows:
             raise StorageUnavailableError("attempt row vanished")
         return _row_to_dict(result.rows[0])
 
-    async def insert_event(self, event: dict, *, connection=None) -> dict:
-        cols = list(event.keys())
-        sql = (
-            f"INSERT INTO id_verification_events ({', '.join(cols)}) "
-            f"VALUES ({', '.join(f'${i+1}' for i in range(len(cols)))}) "
-            f"ON CONFLICT (environment, dedupe_key) DO NOTHING "
-            f"RETURNING {', '.join(_EVENT_COLUMNS)}"
-        )
-        result = await db.query(sql, [event[c] for c in cols], connection=connection)
-        if result.rows:
-            row = _row_to_dict(result.rows[0])
-            row["_inserted"] = True
-            return row
-        existing = await self._fetch(
-            f"SELECT {', '.join(_EVENT_COLUMNS)} FROM id_verification_events "
-            "WHERE environment=$1 AND dedupe_key=$2",
-            [event["environment"], event["dedupe_key"]], connection,
-        )
-        if existing is None:
-            raise StorageUnavailableError("event insert produced no row")
-        existing["_inserted"] = False
-        return existing
+    async def apply_event(
+        self,
+        event: dict,
+        *,
+        attempt_id: Optional[str],
+        fields: Optional[dict],
+        incoming_ts: Optional[float],
+        mark_processed: bool = True,
+    ) -> dict:
+        """Atomically (a) dedupe-insert the event, (b) apply the attempt
+        update under the attempt row lock with the staleness guard re-checked
+        inside the lock, and (c) mark the event processed.
+
+        An insert-then-update failure rolls the whole transaction back, so a
+        replay re-runs the full path; a previously *unprocessed* stored event
+        is resumed rather than reported as duplicate.
+        Returns {"outcome": "applied"|"stale"|"recorded"|"duplicate"}.
+        """
+        async def work(conn) -> dict:
+            cols = list(event.keys())
+            ins_sql = (
+                f"INSERT INTO id_verification_events ({', '.join(cols)}) "
+                f"VALUES ({', '.join(f'${i+1}' for i in range(len(cols)))}) "
+                "ON CONFLICT (environment, dedupe_key) DO NOTHING RETURNING id"
+            )
+            ins = await db.query(ins_sql, [event[c] for c in cols], connection=conn)
+            event_id = None
+            if ins.rows:
+                event_id = ins.rows[0]["id"]
+            else:
+                # Same delivery re-seen: if it was never durably processed,
+                # resume its application instead of reporting a duplicate.
+                existing = await db.query(
+                    "SELECT id, processed_at FROM id_verification_events "
+                    "WHERE environment=$1 AND dedupe_key=$2 FOR UPDATE",
+                    [event["environment"], event["dedupe_key"]], connection=conn,
+                )
+                if not existing.rows:
+                    raise StorageUnavailableError("event insert produced no row")
+                row = existing.rows[0]
+                if row["processed_at"] is not None:
+                    return {"outcome": "duplicate"}
+                event_id = row["id"]
+
+            outcome = "recorded"
+            if attempt_id and fields:
+                lock = await db.query(
+                    "SELECT last_event_created_at_ms FROM id_verification_attempts "
+                    "WHERE id=$1 FOR UPDATE",
+                    [attempt_id], connection=conn,
+                )
+                last_ts = (
+                    _ms_ts(lock.rows[0]["last_event_created_at_ms"]) if lock.rows else None
+                )
+                if incoming_ts is not None and last_ts is not None and incoming_ts < last_ts:
+                    await db.query(
+                        "UPDATE id_verification_events SET disposition='out_of_order' WHERE id=$1",
+                        [event_id], connection=conn,
+                    )
+                    outcome = "stale"
+                else:
+                    sets = ", ".join(f"{k} = ${i+2}" for i, k in enumerate(fields.keys()))
+                    upd = (
+                        f"UPDATE id_verification_attempts SET {sets}, updated_at = now() "
+                        f"WHERE id = $1"
+                    )
+                    await db.query(upd, [attempt_id, *fields.values()], connection=conn)
+                    outcome = "applied"
+
+            if mark_processed:
+                await db.query(
+                    "UPDATE id_verification_events SET processed_at = now() WHERE id=$1",
+                    [event_id], connection=conn,
+                )
+            return {"outcome": outcome}
+
+        try:
+            return await db.with_transaction(work)
+        except StorageUnavailableError:
+            raise
+        except Exception as exc:
+            raise _storage_failure(exc) from exc
 
     async def list_events_for_attempt(self, attempt_id, *, connection=None) -> List[dict]:
         return await self._fetch_all(
@@ -240,17 +325,19 @@ class InMemoryIdVerificationRepository:
                     and a["transfer_party_id"] == transfer_party_id]
             return dict(max(rows, key=lambda a: a["attempt_no"])) if rows else None
 
-    async def find_attempt_by_external_ref(self, environment, external_ref, *, connection=None):
+    async def list_attempts_by_external_ref(self, environment, external_ref, *, connection=None):
         with self._lock:
-            rows = [a for a in self._attempts.values()
+            rows = [dict(a) for a in self._attempts.values()
                     if a["environment"] == environment and a["external_ref"] == external_ref]
-            return dict(max(rows, key=lambda a: a["attempt_no"])) if rows else None
+            rows.sort(key=lambda a: a["attempt_no"], reverse=True)
+            return rows
 
-    async def find_attempt_by_applicant_id(self, environment, applicant_id, *, connection=None):
+    async def list_attempts_by_applicant_id(self, environment, applicant_id, *, connection=None):
         with self._lock:
-            rows = [a for a in self._attempts.values()
+            rows = [dict(a) for a in self._attempts.values()
                     if a["environment"] == environment and a["provider_applicant_id"] == applicant_id]
-            return dict(max(rows, key=lambda a: a["attempt_no"])) if rows else None
+            rows.sort(key=lambda a: a["attempt_no"], reverse=True)
+            return rows
 
     async def create_attempt(self, attempt: dict, *, connection=None) -> dict:
         with self._lock:
@@ -282,20 +369,62 @@ class InMemoryIdVerificationRepository:
             self._attempts[attempt_id]["updated_at"] = datetime.now(timezone.utc).isoformat()
             return dict(self._attempts[attempt_id])
 
-    async def insert_event(self, event: dict, *, connection=None) -> dict:
+    async def apply_event(
+        self,
+        event: dict,
+        *,
+        attempt_id: Optional[str],
+        fields: Optional[dict],
+        incoming_ts: Optional[float],
+        mark_processed: bool = True,
+    ) -> dict:
+        """In-memory mirror of the durable apply_event: one critical section
+        (the lock serialises application), unprocessed stored events resume,
+        and a failed attempt update rolls the staged insert back — the same
+        transaction semantics the Postgres implementation provides."""
         with self._lock:
             dedupe = (event["environment"], event["dedupe_key"])
+            staged = False
+            row = None
             for e in self._events.values():
                 if (e["environment"], e["dedupe_key"]) == dedupe:
-                    existing = dict(e)
-                    existing["_inserted"] = False
-                    return existing
-            row = dict(event)
-            row.setdefault("id", self._new_id())
-            row.setdefault("received_at", datetime.now(timezone.utc).isoformat())
-            self._events[row["id"]] = row
-            row["_inserted"] = True
-            return dict(row)
+                    if e.get("processed_at") is not None:
+                        return {"outcome": "duplicate"}
+                    row = e
+                    break
+            if row is None:
+                row = dict(event)
+                row.setdefault("id", self._new_id())
+                row.setdefault("received_at", datetime.now(timezone.utc).isoformat())
+                row.setdefault("processed_at", None)
+                self._events[row["id"]] = row
+                staged = True
+            try:
+                outcome = "recorded"
+                if attempt_id and fields:
+                    if attempt_id not in self._attempts:
+                        raise StorageUnavailableError("attempt row vanished")
+                    attempt = self._attempts[attempt_id]
+                    last_ts = _ms_ts(attempt.get("last_event_created_at_ms"))
+                    if incoming_ts is not None and last_ts is not None and incoming_ts < last_ts:
+                        row["disposition"] = "out_of_order"
+                        outcome = "stale"
+                    else:
+                        self._apply_fields(attempt, fields)
+                        outcome = "applied"
+                if mark_processed:
+                    row["processed_at"] = datetime.now(timezone.utc).isoformat()
+                return {"outcome": outcome}
+            except Exception:
+                if staged:
+                    del self._events[row["id"]]
+                raise
+
+    def _apply_fields(self, attempt: dict, fields: dict) -> None:
+        """Test seam: the attempt-field write inside apply_event — a test
+        subclass can inject a failure here to prove rollback semantics."""
+        attempt.update(fields)
+        attempt["updated_at"] = datetime.now(timezone.utc).isoformat()
 
     async def list_events_for_attempt(self, attempt_id, *, connection=None) -> List[dict]:
         with self._lock:

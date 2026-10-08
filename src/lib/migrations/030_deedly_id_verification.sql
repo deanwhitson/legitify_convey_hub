@@ -24,11 +24,13 @@ CREATE TABLE IF NOT EXISTS transfers.id_verification_attempts (
     transfer_id                 UUID NOT NULL REFERENCES transfers.transfers(id),
     transfer_party_id           UUID NOT NULL REFERENCES transfers.transfer_parties(id),
     subject_kind                TEXT NOT NULL,  -- 'party' | 'representative'
+    on_behalf_of_party_id       UUID REFERENCES transfers.transfer_parties(id),
     attempt_no                  INTEGER NOT NULL,
     external_ref                TEXT NOT NULL,  -- opaque provider externalUserId
     provider                    TEXT NOT NULL,
     provider_applicant_id       TEXT,
     level_name                  TEXT,
+    inspection_id               TEXT,  -- provider review-cycle identifier, bound on first event
     status                      TEXT NOT NULL CHECK (status IN (
         'not_started', 'started', 'pending', 'verified',
         'retry_requested', 'declined', 'review_required')),
@@ -68,6 +70,7 @@ CREATE TABLE IF NOT EXISTS transfers.id_verification_events (
     external_ref            TEXT,
     correlation_id          TEXT,
     level_name              TEXT,
+    inspection_id           TEXT,
     review_status           TEXT,
     review_answer           TEXT,
     review_reject_type      TEXT,
@@ -75,7 +78,7 @@ CREATE TABLE IF NOT EXISTS transfers.id_verification_events (
     provider_created_at_ms  TEXT,
     received_at             TIMESTAMPTZ NOT NULL DEFAULT now(),
     processed_at            TIMESTAMPTZ,
-    disposition             TEXT NOT NULL,  -- matched | unmatched | test_mode | duplicate | out_of_order | unhandled
+    disposition             TEXT NOT NULL,  -- matched | unmatched | binding_mismatch | test_mode | duplicate | out_of_order | unhandled | previous_cycle | ambiguous_not_applied
     UNIQUE (environment, dedupe_key)
 );
 

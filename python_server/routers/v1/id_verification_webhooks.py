@@ -21,6 +21,7 @@ from services.id_verification_config import (
 )
 from services.id_verification_service import (
     IdVerificationError,
+    ReconcilePendingError,
     StorageUnavailableError,
     apply_webhook_event,
     build_context,
@@ -30,6 +31,11 @@ from services.id_verification_service import (
 )
 
 router = APIRouter()
+
+# The fixture receiver is a local demo boundary: it only answers loopback
+# clients so that fixture mode on a reachable host can never become a
+# general unauthenticated status injector.
+_LOOPBACK_HOSTS = {"127.0.0.1", "::1", "localhost", "testclient", "test"}
 
 _DIGEST_HEADER = "x-payload-digest"
 _ALG_HEADER = "x-payload-digest-alg"
@@ -80,6 +86,10 @@ async def sumsub_webhook(request: Request):
     except StorageUnavailableError:
         # Not durable → not acknowledged; Sumsub will retry delivery.
         raise HTTPException(status_code=503, detail="Storage unavailable")
+    except ReconcilePendingError:
+        # Ambiguous event, recorded unprocessed — do not acknowledge; the
+        # provider retries and the event resumes on redelivery.
+        raise HTTPException(status_code=503, detail="Reconcile pending")
     except IdVerificationError:
         raise HTTPException(status_code=400, detail="Malformed payload")
     return {"message": "OK", "data": outcome}
@@ -87,13 +97,17 @@ async def sumsub_webhook(request: Request):
 
 @router.post("/webhooks/sumsub-fixture")
 async def sumsub_fixture_webhook(request: Request):
-    """Fixture-mode event injector — exists ONLY for SUMSUB_MODE=fixture.
+    """Fixture-mode event injector — exists ONLY for SUMSUB_MODE=fixture and
+    ONLY for loopback clients. It is a local demo boundary, not a provider
+    endpoint: a non-local caller gets 404 exactly as in every other mode.
 
     Lets the offline demo drive synthetic outcomes through the identical
-    dedupe/ordering/state path with zero provider traffic. In every other
-    mode the route does not exist (404)."""
+    dedupe/ordering/state path with zero provider traffic."""
     config = load_id_verification_config(request.app.state.settings)
     if config.mode != MODE_FIXTURE:
+        raise HTTPException(status_code=404, detail="Not found")
+    client_host = request.client.host if request.client else None
+    if client_host not in _LOOPBACK_HOSTS:
         raise HTTPException(status_code=404, detail="Not found")
 
     raw = await request.body()
@@ -110,4 +124,6 @@ async def sumsub_fixture_webhook(request: Request):
         outcome = await apply_webhook_event(ctx, event)
     except StorageUnavailableError:
         raise HTTPException(status_code=503, detail="Storage unavailable")
+    except ReconcilePendingError:
+        return {"message": "OK", "data": {"result": "reconcile_unavailable"}}
     return {"message": "OK", "data": outcome}

@@ -4,7 +4,14 @@ export interface SumsubCaptureProps {
   accessToken: string
   /** Returns a fresh short-lived SDK token — server-authorised renewal. */
   expirationHandler: () => Promise<string>
+  /** Ordinary flow progress (readiness/step/document events) — the caller
+   *  must NOT unmount the capture for these. */
   onProgress: (type: string) => void
+  /** The SDK signalled the applicant flow reached a submitted/reviewed/
+   *  terminal stage — the caller may leave the capture view. */
+  onSettled: (type: string) => void
+  /** The applicant cancelled the flow — the caller may leave the capture. */
+  onCancelled: (type: string) => void
   onError: (code: string) => void
 }
 
@@ -12,16 +19,35 @@ export interface SumsubCaptureProps {
 // provider session actually starts — fixture/demo mode and tests never pull it.
 const SumsubWebSdk = React.lazy(() => import('@sumsub/websdk-react'))
 
+// Message classification (docs.sumsub.com WebSDK onMessage types, accessed
+// 2026-10-08). Anything not listed here is ordinary progress — the safe
+// default is to keep the capture mounted.
+const SETTLED_MESSAGES = new Set([
+  'idCheck.onApplicantSubmitted',
+  'idCheck.onApplicantStatusChanged',
+  'idCheck.applicantStatus',
+  'idCheck.onApplicantPending',
+  'idCheck.onApplicantReviewed',
+  'idCheck.onApplicantWorkflowCompleted',
+  'idCheck.onApplicantWorkflowFailed',
+])
+const CANCELLED_MESSAGES = new Set([
+  'idCheck.onCancel',
+  'idCheck.onApplicantCancelled',
+])
+
 /**
  * Provider-capture wrapper — mounts the official Sumsub WebSDK
  * (@sumsub/websdk-react 2.9.0) for a configured provider session. SDK
- * callbacks are flow progress only; they never decide an outcome — the
+ * callbacks are flow signals only; they never decide an outcome — the
  * server-authorised status is the only source of truth.
  */
 const SumsubCapture: React.FC<SumsubCaptureProps> = ({
   accessToken,
   expirationHandler,
   onProgress,
+  onSettled,
+  onCancelled,
   onError,
 }) => (
   <Suspense
@@ -34,7 +60,11 @@ const SumsubCapture: React.FC<SumsubCaptureProps> = ({
     <SumsubWebSdk
       accessToken={accessToken}
       expirationHandler={expirationHandler}
-      onMessage={(type: string) => onProgress(type)}
+      onMessage={(type: string) => {
+        if (SETTLED_MESSAGES.has(type)) onSettled(type)
+        else if (CANCELLED_MESSAGES.has(type)) onCancelled(type)
+        else onProgress(type)
+      }}
       onError={(error: unknown) => {
         const code =
           typeof error === 'object' && error !== null && 'code' in error
