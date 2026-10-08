@@ -20,12 +20,15 @@ export interface SumsubCaptureProps {
 const SumsubWebSdk = React.lazy(() => import('@sumsub/websdk-react'))
 
 // Message classification (docs.sumsub.com WebSDK onMessage types, accessed
-// 2026-10-08). Anything not listed here is ordinary progress — the safe
-// default is to keep the capture mounted.
+// 2026-10-08). Only explicitly documented completion/submission events
+// leave the capture; `idCheck.applicantStatus` and
+// `idCheck.onApplicantStatusChanged` are GENERAL status-change messages
+// (payload reviewStatus/reviewResult can be interim, onHold or
+// awaitingUser — not completion), so they are progress and keep the SDK
+// mounted. Anything unlisted is ordinary progress — the safe default.
 const SETTLED_MESSAGES = new Set([
+  'idCheck.onApplicantVerificationCompleted',
   'idCheck.onApplicantSubmitted',
-  'idCheck.onApplicantStatusChanged',
-  'idCheck.applicantStatus',
   'idCheck.onApplicantPending',
   'idCheck.onApplicantReviewed',
   'idCheck.onApplicantWorkflowCompleted',

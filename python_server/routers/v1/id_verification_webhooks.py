@@ -11,6 +11,8 @@ SUMSUB_MODE=fixture, where it feeds synthetic events through the same
 apply path so the offline demo exercises dedupe/ordering/state code.
 """
 
+import hmac
+
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
 
@@ -32,10 +34,15 @@ from services.id_verification_service import (
 
 router = APIRouter()
 
-# The fixture receiver is a local demo boundary: it only answers loopback
-# clients so that fixture mode on a reachable host can never become a
-# general unauthenticated status injector.
+# The fixture receiver is a local demo boundary. Simulation mutation is
+# never reachable merely by enabling fixture mode: it additionally requires
+# the operator-set SUMSUB_FIXTURE_RECEIVER_TOKEN credential, presented in
+# the X-Dev-Fixture-Token header and compared in constant time, AND a
+# loopback peer. A loopback peer alone is not authentication (a local
+# reverse proxy can relay foreign callers); a fixed header value alone
+# would not be either — the token is operator-chosen per environment.
 _LOOPBACK_HOSTS = {"127.0.0.1", "::1", "localhost", "testclient", "test"}
+_FIXTURE_TOKEN_HEADER = "x-dev-fixture-token"
 
 _DIGEST_HEADER = "x-payload-digest"
 _ALG_HEADER = "x-payload-digest-alg"
@@ -97,9 +104,13 @@ async def sumsub_webhook(request: Request):
 
 @router.post("/webhooks/sumsub-fixture")
 async def sumsub_fixture_webhook(request: Request):
-    """Fixture-mode event injector — exists ONLY for SUMSUB_MODE=fixture and
-    ONLY for loopback clients. It is a local demo boundary, not a provider
-    endpoint: a non-local caller gets 404 exactly as in every other mode.
+    """Fixture-mode event injector — a narrow, explicitly enabled local
+    demo boundary, not a provider endpoint. Answers 404 unless ALL hold:
+
+    * SUMSUB_MODE=fixture;
+    * SUMSUB_FIXTURE_RECEIVER_TOKEN is configured (opt-in, operator-set);
+    * the request presents that token in X-Dev-Fixture-Token;
+    * the peer is loopback.
 
     Lets the offline demo drive synthetic outcomes through the identical
     dedupe/ordering/state path with zero provider traffic."""
@@ -107,7 +118,10 @@ async def sumsub_fixture_webhook(request: Request):
     if config.mode != MODE_FIXTURE:
         raise HTTPException(status_code=404, detail="Not found")
     client_host = request.client.host if request.client else None
-    if client_host not in _LOOPBACK_HOSTS:
+    token = config.fixture_receiver_token
+    presented = request.headers.get(_FIXTURE_TOKEN_HEADER) or ""
+    if (client_host not in _LOOPBACK_HOSTS or not token
+            or not hmac.compare_digest(presented, token)):
         raise HTTPException(status_code=404, detail="Not found")
 
     raw = await request.body()

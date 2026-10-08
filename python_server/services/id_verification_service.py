@@ -36,7 +36,13 @@ from services.id_verification_config import (
     config_available,
 )
 from services.id_verification_mapping import (
+    STATUS_DECLINED,
+    STATUS_NOT_STARTED,
+    STATUS_PENDING,
+    STATUS_RETRY_REQUESTED,
+    STATUS_REVIEW_REQUIRED,
     STATUS_STARTED,
+    STATUS_VERIFIED,
     map_event_to_status,
     performed_check_summary,
     sanitised_review_summary,
@@ -423,11 +429,13 @@ async def _resolve_attempt(
     Returns (attempt_or_None, disposition, ambiguous):
       * ``unmatched`` — no attempt owns the asserted external ref/applicant.
       * ``binding_mismatch`` — identifiers resolve but contradict the stored
-        binding (applicant id, level or review cycle). Never applied.
-      * ``matched`` — a single attempt owns every asserted identifier.
+        binding (applicant id or level). Never applied.
+      * ``matched`` — the event belongs to the latest attempt cycle.
+      * ``prior_cycle`` — the event's provider time falls inside an older
+        attempt's cycle window; applied to that attempt, not the latest.
     ``ambiguous`` marks a resolution that needs provider reconcile before the
-    event may apply (e.g. an inspectionId unseen on any attempt while prior
-    cycles exist, or a missing timestamp).
+    event may apply (missing/out-of-window timestamp or an inspection id
+    contradicting a recorded one).
     """
     repo = ctx.repository
     ext = event.get("externalUserId")
@@ -460,50 +468,104 @@ async def _resolve_attempt(
             return None, "binding_mismatch", False
         candidates = matches
 
+    # inspectionId cross-check — applicant-scoped (deprecated in provider
+    # docs), so it never selects the owning cycle, but a value contradicting
+    # an inspection id recorded on ANY bound attempt is evidence to
+    # reconcile before trusting the event.
     inspection = _event_inspection_id(event)
-    ambiguous = False
-    if inspection:
-        owned = [a for a in candidates if a.get("inspection_id") == inspection]
-        if owned:
-            return owned[0], "matched", False
-        bound = [a for a in candidates if a.get("inspection_id")]
-        unbound = [a for a in candidates if not a.get("inspection_id")]
-        if not unbound:
-            # A review cycle none of our attempts claims — never guess.
-            return None, "binding_mismatch", False
-        # An unseen cycle id landing on an unbound attempt: plausibly its own
-        # first event, but with earlier bound cycles it could equally be a
-        # delayed previous-cycle event — reconcile before trusting it.
-        ambiguous = bool(bound)
-        return unbound[0], "matched", ambiguous
-    return candidates[0], "matched", False
+    bound_inspections = {
+        a.get("inspection_id") for a in candidates if a.get("inspection_id")
+    }
+    ambiguous = bool(
+        inspection and bound_inspections and inspection not in bound_inspections
+    )
+
+    if len(candidates) == 1:
+        return candidates[0], "matched", ambiguous
+
+    # Several attempts share this binding (retries reuse the provider
+    # applicant). Route by the event's provider createdAtMs against recorded
+    # cycle start times — candidates are attempt_no DESC, so candidates[i]'s
+    # window ends where candidates[i-1] began. A missing or out-of-window
+    # timestamp cannot be routed safely — reconcile on the latest cycle.
+    ts = _event_ms(event)
+    if ts is None:
+        return candidates[0], "matched", True
+    owner = None
+    for i, cand in enumerate(candidates):
+        start = _attempt_created_ts(cand)
+        end = _attempt_created_ts(candidates[i - 1]) if i > 0 else None
+        if start is None:
+            return candidates[0], "matched", True
+        if ts >= start and (end is None or ts < end):
+            owner = cand
+            break
+    if owner is None:
+        # Predates every recorded cycle — no attempt owns this event.
+        return candidates[0], "matched", True
+    disposition = "matched" if owner is candidates[0] else "prior_cycle"
+    return owner, disposition, ambiguous
+
+
+# reviewStatus values the provider documents as concluded vs in-progress
+# (docs.sumsub.com user-verification webhooks, accessed 2026-10-08). Only a
+# FINAL review status may produce a verdict — a GREEN reviewAnswer without
+# a final status is a hold/interim answer, never an approval.
+_FINAL_REVIEW_STATUSES = frozenset({"completed"})
+_IN_PROGRESS_REVIEW_STATUSES = frozenset({
+    "init", "pending", "prechecked", "queued", "awaitingUser",
+})
+_ON_HOLD_REVIEW_STATUSES = frozenset({"onHold"})
 
 
 async def _reconcile_attempt_status(
     ctx: VerificationContext, attempt: dict, event: Dict[str, Any]
-) -> Optional[str]:
-    """Authenticated provider reconcile for ambiguous events. Returns a
-    mapped status only when the provider confirms a review answer for the
-    same review cycle; None when nothing safe can be confirmed."""
+) -> Optional[tuple]:
+    """Authenticated provider reconcile for ambiguous events.
+
+    Returns ``(status, summary)`` where summary carries the provider-
+    confirmed sanitised review fields — never the ambiguous incoming
+    event's. Returns None when nothing safe can be confirmed (missing or
+    unrecognised review status, contradictory data), so the event is
+    recorded but not applied.
+    """
     client = ctx.client
     if not isinstance(client, SumsubApiClient) or not attempt.get("provider_applicant_id"):
         return None
     live = await client.get_applicant_review_status(attempt["provider_applicant_id"])
     inspection = _event_inspection_id(event)
     if inspection and live.inspection_id and live.inspection_id != inspection:
-        # Live provider state belongs to a different review cycle — the
+        # Live provider state belongs to a different inspection — the
         # incoming event cannot be trusted for this attempt.
         return None
-    if not live.review_answer:
-        return None
-    return map_event_to_status({
-        "type": "applicantReviewed",
-        "reviewResult": {
-            "reviewAnswer": live.review_answer,
-            "reviewRejectType": live.review_reject_type,
-        },
-        "reviewStatus": live.review_status,
-    })
+    summary = {
+        "review_answer": live.review_answer,
+        "review_reject_type": live.review_reject_type,
+        "reject_labels": list(live.reject_labels),
+    }
+    review_status = (live.review_status or "").strip()
+    if review_status in _FINAL_REVIEW_STATUSES:
+        answer = live.review_answer
+        if answer == "GREEN":
+            return STATUS_VERIFIED, summary
+        if answer == "RED":
+            if live.review_reject_type == "RETRY":
+                return STATUS_RETRY_REQUESTED, summary
+            if live.review_reject_type == "FINAL":
+                return STATUS_DECLINED, summary
+            return STATUS_REVIEW_REQUIRED, summary
+        # Concluded review with a missing/unrecognised answer — never
+        # verified; a reviewer must look at it.
+        return STATUS_REVIEW_REQUIRED, summary
+    if review_status in _IN_PROGRESS_REVIEW_STATUSES:
+        # The review has not concluded — the interim answer is not a
+        # verdict. The attempt is still open awaiting the provider.
+        return STATUS_PENDING, summary
+    if review_status in _ON_HOLD_REVIEW_STATUSES:
+        # Held for review/awaiting action — needs a human, not a verdict.
+        return STATUS_REVIEW_REQUIRED, summary
+    # Missing or unrecognised review status — cannot reconcile.
+    return None
 
 
 async def apply_webhook_event(
@@ -591,9 +653,12 @@ async def apply_webhook_event(
         return {"result": "unmatched", "disposition": disposition}
 
     # Cycle-cutoff guard: an event that predates this attempt's creation
-    # belongs to a previous cycle — recorded, never applied here.
+    # belongs to a previous cycle — recorded, never applied here. Ambiguous
+    # resolutions skip this guard: they reconcile first, so an event that
+    # predates even the latest cycle is not silently discarded stale.
     created_ts = _attempt_created_ts(attempt)
-    if incoming_ts is not None and created_ts is not None and incoming_ts < created_ts:
+    if (not ambiguous and incoming_ts is not None and created_ts is not None
+            and incoming_ts < created_ts):
         event_row["disposition"] = "previous_cycle"
         out = await record()
         if out["outcome"] == "duplicate":
@@ -627,6 +692,7 @@ async def apply_webhook_event(
     if _event_inspection_id(event) and not attempt.get("inspection_id"):
         fields["inspection_id"] = _event_inspection_id(event)
 
+    confirmed = False
     if needs_reconcile:
         try:
             reconciled = await _reconcile_attempt_status(ctx, attempt, event)
@@ -643,16 +709,28 @@ async def apply_webhook_event(
             if out["outcome"] == "duplicate":
                 return {"result": "duplicate", "disposition": "duplicate"}
             return {"result": "ambiguous_not_applied", "disposition": "ambiguous_not_applied"}
-        fields["status"] = reconciled
+        reconciled_status, reconciled_summary = reconciled
+        fields["status"] = reconciled_status
+        # Persist the provider-confirmed summary, not the ambiguous incoming
+        # event's — a held/interim answer must not survive as if reviewed.
+        fields["review_answer"] = reconciled_summary["review_answer"]
+        fields["review_reject_type"] = reconciled_summary["review_reject_type"]
+        fields["reject_labels"] = reconciled_summary["reject_labels"]
+        confirmed = True
 
     out = await ctx.repository.apply_event(
         event_row,
         attempt_id=attempt["id"],
         fields=fields,
         incoming_ts=incoming_ts,
+        confirmed=confirmed,
     )
     if out["outcome"] == "duplicate":
         return {"result": "duplicate", "disposition": "duplicate"}
     if out["outcome"] == "stale":
         return {"result": "stale_ignored", "disposition": "out_of_order"}
+    if out["outcome"] == "ambiguous":
+        # A concurrent write reordered under the row lock — recorded, not
+        # applied; redelivery reconciles again against fresh state.
+        return {"result": "ambiguous_not_applied", "disposition": "ambiguous_not_applied"}
     return {"result": "applied", "disposition": disposition, "status": fields["status"]}

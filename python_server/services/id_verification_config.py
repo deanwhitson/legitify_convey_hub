@@ -42,6 +42,10 @@ class IdVerificationConfig:
     base_url: str = DEFAULT_BASE_URL
     level_name: Optional[str] = None
     sdk_token_ttl_seconds: int = SDK_TOKEN_TTL_SECONDS
+    # Local demo boundary credential for the fixture receiver: fixture mode
+    # alone never opens the simulation endpoint — it additionally requires
+    # this operator-set token (loopback + X-Dev-Fixture-Token header match).
+    fixture_receiver_token: Optional[str] = field(default=None, repr=False)
     # Names of missing settings for a safe "configuration_unavailable" detail.
     missing: tuple = ()
 
@@ -70,7 +74,13 @@ def load_id_verification_config(env=None) -> IdVerificationConfig:
     mode = (env_get("SUMSUB_MODE") or "").strip().lower() or MODE_DISABLED
 
     if mode == MODE_FIXTURE:
-        return IdVerificationConfig(mode=MODE_FIXTURE, environment="fixture")
+        return IdVerificationConfig(
+            mode=MODE_FIXTURE,
+            environment="fixture",
+            fixture_receiver_token=(
+                (env_get("SUMSUB_FIXTURE_RECEIVER_TOKEN") or "").strip() or None
+            ),
+        )
 
     if mode != MODE_SANDBOX:
         # disabled, live/production or unrecognised — all unavailable.

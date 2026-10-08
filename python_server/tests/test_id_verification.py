@@ -128,10 +128,13 @@ def _fixture_event(ext_ref, etype="applicantReviewed", *,
 class IdVerificationRouteTests(unittest.TestCase):
     """Staff routes: authz, subject validation, session lifecycle."""
 
+    FIXTURE_TOKEN = "route-test-fixture-token"
+
     @classmethod
     def setUpClass(cls):
         os.environ["JWT_SECRET"] = TEST_JWT_SECRET
         os.environ["SUMSUB_MODE"] = "fixture"
+        os.environ["SUMSUB_FIXTURE_RECEIVER_TOKEN"] = cls.FIXTURE_TOKEN
         cls.get_pool_patch = patch("main.get_pool", new_callable=AsyncMock)
         cls.close_pool_patch = patch("main.close_pool", new_callable=AsyncMock)
         cls.entities_client_patch = patch("main.EntitiesClient", return_value=AsyncMock())
@@ -284,7 +287,10 @@ class IdVerificationRouteTests(unittest.TestCase):
         created = datetime.fromisoformat(attempt["created_at"])
         ms = (created + timedelta(seconds=60)).strftime("%Y-%m-%d %H:%M:%S.000")
         event = _fixture_event(ext_ref, ms=ms, review={"reviewAnswer": "GREEN"})
-        w = self.client.post("/api/v1/webhooks/sumsub-fixture", json=event)
+        w = self.client.post(
+            "/api/v1/webhooks/sumsub-fixture", json=event,
+            headers={"X-Dev-Fixture-Token": self.FIXTURE_TOKEN},
+        )
         self.assertEqual(w.status_code, 200)
         r = self.client.get(self._path(), headers=_auth())
         data = r.json()["data"]
@@ -312,6 +318,7 @@ class IdVerificationRouteTests(unittest.TestCase):
         self.client.post(
             "/api/v1/webhooks/sumsub-fixture",
             json=_fixture_event(ext_ref, ms=ms, review={"reviewAnswer": "GREEN"}),
+            headers={"X-Dev-Fixture-Token": self.FIXTURE_TOKEN},
         )
         r = self.client.post(self._path(suffix="/session"), json={}, headers=_auth())
         self.assertEqual(r.status_code, 409)
@@ -331,13 +338,13 @@ class IdVerificationRouteTests(unittest.TestCase):
         self.assertEqual(data["onBehalfOfPartyId"], COMPANY_PARTY_ID)
 
     def test_fixture_webhook_denies_non_local_client(self):
-        # The fixture receiver is a loopback-only demo boundary — a remote
-        # caller gets 404 exactly as in every other mode.
+        # Even with the correct demo token, a non-loopback peer gets 404.
         remote = TestClient(app, client=("203.0.113.9", 4444)).__enter__()
         try:
             r = remote.post(
                 "/api/v1/webhooks/sumsub-fixture",
                 json={"type": "applicantReviewed"},
+                headers={"X-Dev-Fixture-Token": self.FIXTURE_TOKEN},
             )
             self.assertEqual(r.status_code, 404)
         finally:
@@ -347,10 +354,45 @@ class IdVerificationRouteTests(unittest.TestCase):
             # teardown can close cleanly.
             app.state.entities_client = AsyncMock()
 
-    def test_fixture_webhook_loopback_allowed(self):
+    def test_fixture_webhook_denied_without_token(self):
+        # Fixture mode alone is not an injector: no token header → 404.
         r = self.client.post(
             "/api/v1/webhooks/sumsub-fixture",
             json={"type": "applicantCreated", "createdAtMs": "2026-10-08 10:00:00.000"},
+        )
+        self.assertEqual(r.status_code, 404)
+
+    def test_fixture_webhook_denied_wrong_token(self):
+        r = self.client.post(
+            "/api/v1/webhooks/sumsub-fixture",
+            json={"type": "applicantCreated", "createdAtMs": "2026-10-08 10:00:00.000"},
+            headers={"X-Dev-Fixture-Token": "not-the-token"},
+        )
+        self.assertEqual(r.status_code, 404)
+
+    def test_fixture_webhook_denied_when_token_unconfigured(self):
+        # With no operator-set token the receiver is closed entirely —
+        # fixture mode on a reachable host is not a status injector.
+        # Settings load at lifespan, so a fresh client picks up the
+        # emptied env var.
+        with patch.dict(os.environ, {"SUMSUB_FIXTURE_RECEIVER_TOKEN": ""}):
+            c = TestClient(app).__enter__()
+            try:
+                r = c.post(
+                    "/api/v1/webhooks/sumsub-fixture",
+                    json={"type": "applicantCreated", "createdAtMs": "2026-10-08 10:00:00.000"},
+                    headers={"X-Dev-Fixture-Token": self.FIXTURE_TOKEN},
+                )
+            finally:
+                c.__exit__(None, None, None)
+                app.state.entities_client = AsyncMock()
+        self.assertEqual(r.status_code, 404)
+
+    def test_fixture_webhook_loopback_with_token_allowed(self):
+        r = self.client.post(
+            "/api/v1/webhooks/sumsub-fixture",
+            json={"type": "applicantCreated", "createdAtMs": "2026-10-08 10:00:00.000"},
+            headers={"X-Dev-Fixture-Token": self.FIXTURE_TOKEN},
         )
         self.assertEqual(r.status_code, 200)
 
@@ -865,6 +907,8 @@ class WebhookApplySemanticsTests(unittest.TestCase):
     def test_previous_cycle_event_cannot_verify_new_attempt(self):
         # Reviewer repro: attempt 1 got RED/RETRY at 10:01; a new cycle
         # opened at 10:02; a delayed GREEN for cycle 1 (10:00:30) arrives.
+        # It binds to cycle 1 by timestamp window, where it is also older
+        # than that cycle's last event — recorded stale, applied nowhere.
         self._mk_attempt(no=1, status="retry_requested", insp="insp-1",
                          last_ms="2026-10-08 10:01:00.000")
         self._mk_attempt(no=2, status="started",
@@ -872,35 +916,85 @@ class WebhookApplySemanticsTests(unittest.TestCase):
         event = self._ev(ms="2026-10-08 10:00:30.000",
                          review={"reviewAnswer": "GREEN"})
         out = self._apply(event)
-        self.assertEqual(out["disposition"], "previous_cycle")
+        self.assertEqual(out["result"], "stale_ignored")
         attempts = {a["attempt_no"]: a for a in self._attempts()}
         self.assertEqual(attempts[2]["status"], "started")
         self.assertEqual(attempts[1]["status"], "retry_requested")
 
-    def test_inspection_id_routes_event_to_owning_cycle(self):
+    def test_newer_event_same_inspection_id_binds_current_cycle(self):
+        # R1 repro: inspectionId is applicant-scoped, not a cycle id — a
+        # NEWER event carrying the same inspectionId as cycle 1 belongs to
+        # the current cycle 2, not the old one.
         self._mk_attempt(no=1, status="retry_requested", insp="insp-1",
                          last_ms="2026-10-08 10:01:00.000")
         self._mk_attempt(no=2, status="started",
                          created="2026-10-08T10:02:00+00:00")
-        # A legitimately delayed verdict for cycle 1 newer than its last event.
         event = self._ev(ms="2026-10-08 10:03:00.000", insp="insp-1",
                          review={"reviewAnswer": "GREEN"})
         out = self._apply(event)
         self.assertEqual(out["result"], "applied")
         attempts = {a["attempt_no"]: a for a in self._attempts()}
+        self.assertEqual(attempts[2]["status"], "verified")
+        # The prior cycle is untouched by the new cycle's verdict.
+        self.assertEqual(attempts[1]["status"], "retry_requested")
+
+    def test_timestamp_window_routes_prior_cycle_event(self):
+        # A delayed verdict genuinely inside cycle 1's window binds cycle 1
+        # by timestamp — inspectionId is only recorded evidence, not the
+        # routing authority.
+        self._mk_attempt(no=1, status="retry_requested", insp="insp-1",
+                         last_ms="2026-10-08 10:01:00.000")
+        self._mk_attempt(no=2, status="started",
+                         created="2026-10-08T10:02:00+00:00")
+        event = self._ev(ms="2026-10-08 10:01:30.000", insp="insp-1",
+                         review={"reviewAnswer": "GREEN"})
+        out = self._apply(event)
+        self.assertEqual(out["result"], "applied")
+        self.assertEqual(out["disposition"], "prior_cycle")
+        attempts = {a["attempt_no"]: a for a in self._attempts()}
         self.assertEqual(attempts[1]["status"], "verified")
         # The open cycle is untouched by the previous cycle's verdict.
         self.assertEqual(attempts[2]["status"], "started")
 
+    def test_event_predating_all_cycles_needs_reconcile(self):
+        # An event older than every recorded cycle has no owner — ambiguous,
+        # never guessed onto the latest attempt.
+        self._mk_attempt(no=1, status="retry_requested", insp="insp-1",
+                         last_ms="2026-10-08 10:01:00.000")
+        self._mk_attempt(no=2, status="started",
+                         created="2026-10-08T10:02:00+00:00")
+        event = self._ev(ms="2026-10-08 08:00:00.000", insp="insp-1",
+                         review={"reviewAnswer": "GREEN"})
+        out = self._apply(event)
+        self.assertEqual(out["result"], "ambiguous_not_applied")
+        attempts = {a["attempt_no"]: a for a in self._attempts()}
+        self.assertEqual(attempts[1]["status"], "retry_requested")
+        self.assertEqual(attempts[2]["status"], "started")
+
     def test_unknown_cycle_id_with_prior_cycles_needs_reconcile(self):
-        # Prior bound cycle exists; an event claims an unseen inspection id —
-        # ambiguous, so the fixture (no provider) cannot apply it.
+        # Prior bound cycle recorded insp-1; an event claims an unseen
+        # inspection id — contradictory evidence, so reconcile is required
+        # and the fixture (no provider) cannot apply it.
         self._mk_attempt(no=1, status="retry_requested", insp="insp-1",
                          last_ms="2026-10-08 10:01:00.000")
         self._mk_attempt(no=2, status="started",
                          created="2026-10-08T10:02:00+00:00")
         event = self._ev(ms="2026-10-08 10:05:00.000", insp="insp-2",
                          review={"reviewAnswer": "GREEN"})
+        out = self._apply(event)
+        self.assertEqual(out["result"], "ambiguous_not_applied")
+        attempts = {a["attempt_no"]: a for a in self._attempts()}
+        self.assertEqual(attempts[2]["status"], "started")
+
+    def test_missing_timestamp_multi_cycle_needs_reconcile(self):
+        # No createdAtMs: the event cannot be placed in a cycle — reconcile
+        # is required; the fixture client cannot supply one.
+        self._mk_attempt(no=1, status="retry_requested", insp="insp-1",
+                         last_ms="2026-10-08 10:01:00.000")
+        self._mk_attempt(no=2, status="started",
+                         created="2026-10-08T10:02:00+00:00")
+        event = self._ev(insp="insp-1", review={"reviewAnswer": "GREEN"})
+        del event["createdAtMs"]
         out = self._apply(event)
         self.assertEqual(out["result"], "ambiguous_not_applied")
         attempts = {a["attempt_no"]: a for a in self._attempts()}
@@ -985,6 +1079,149 @@ class WebhookApplySemanticsTests(unittest.TestCase):
         out = self._apply(event)
         self.assertEqual(out["result"], "ambiguous_not_applied")
         self.assertEqual(self._attempts()[0]["status"], "started")
+
+
+    # --- R2: reconcile must honour the provider's reviewStatus --------------
+
+    def _provider_ctx(self, payload):
+        import httpx
+        def handler(request):
+            return httpx.Response(200, json=payload)
+        self.ctx.client = SumsubApiClient(
+            IdVerificationConfig(
+                mode="sandbox", environment="sandbox",
+                app_token="t", app_secret="s", base_url="https://api.sumsub.com",
+            ),
+            transport=httpx.MockTransport(handler),
+        )
+
+    def test_reconcile_on_hold_green_is_not_verified(self):
+        # R2 repro: provider documents GREEN appearing in onHold — an
+        # answer alone is not a final approval.
+        self._mk_attempt(last_ms="2026-10-08 10:00:00.000")
+        self._provider_ctx({
+            "reviewStatus": "onHold",
+            "reviewResult": {"reviewAnswer": "GREEN"},
+        })
+        event = self._ev(ms="2026-10-08 10:00:00.000",
+                         review={"reviewAnswer": "GREEN"})
+        out = self._apply(event)
+        self.assertEqual(out["result"], "applied")
+        self.assertEqual(out["status"], "review_required")
+        attempt = self._attempts()[0]
+        self.assertEqual(attempt["status"], "review_required")
+        # The provider-confirmed interim answer is what persists — never a
+        # promoted verdict.
+        self.assertEqual(attempt["review_answer"], "GREEN")
+
+    def test_reconcile_pending_green_is_not_verified(self):
+        self._mk_attempt(last_ms="2026-10-08 10:00:00.000")
+        self._provider_ctx({
+            "reviewStatus": "pending",
+            "reviewResult": {"reviewAnswer": "GREEN"},
+        })
+        event = self._ev(ms="2026-10-08 10:00:00.000",
+                         review={"reviewAnswer": "GREEN"})
+        out = self._apply(event)
+        self.assertEqual(out["result"], "applied")
+        self.assertEqual(out["status"], "pending")
+        self.assertEqual(self._attempts()[0]["status"], "pending")
+
+    def test_reconcile_missing_status_never_applies(self):
+        self._mk_attempt(last_ms="2026-10-08 10:00:00.000")
+        self._provider_ctx({
+            "reviewResult": {"reviewAnswer": "GREEN"},
+        })
+        event = self._ev(ms="2026-10-08 10:00:00.000",
+                         review={"reviewAnswer": "GREEN"})
+        out = self._apply(event)
+        self.assertEqual(out["result"], "ambiguous_not_applied")
+        self.assertEqual(self._attempts()[0]["status"], "started")
+
+    def test_reconcile_unknown_status_never_applies(self):
+        self._mk_attempt(last_ms="2026-10-08 10:00:00.000")
+        self._provider_ctx({
+            "reviewStatus": "halfDoneSomethingNew",
+            "reviewResult": {"reviewAnswer": "GREEN"},
+        })
+        event = self._ev(ms="2026-10-08 10:00:00.000",
+                         review={"reviewAnswer": "GREEN"})
+        out = self._apply(event)
+        self.assertEqual(out["result"], "ambiguous_not_applied")
+        self.assertEqual(self._attempts()[0]["status"], "started")
+
+    def test_reconcile_completed_green_verifies(self):
+        self._mk_attempt(last_ms="2026-10-08 10:00:00.000")
+        self._provider_ctx({
+            "reviewStatus": "completed",
+            "reviewResult": {"reviewAnswer": "GREEN"},
+        })
+        event = self._ev(ms="2026-10-08 10:00:00.000",
+                         review={"reviewAnswer": "GREEN"})
+        out = self._apply(event)
+        self.assertEqual(out["result"], "applied")
+        self.assertEqual(self._attempts()[0]["status"], "verified")
+
+    def test_reconcile_completed_red_retry(self):
+        self._mk_attempt(last_ms="2026-10-08 10:00:00.000")
+        self._provider_ctx({
+            "reviewStatus": "completed",
+            "reviewResult": {"reviewAnswer": "RED", "reviewRejectType": "RETRY"},
+        })
+        event = self._ev(ms="2026-10-08 10:00:00.000",
+                         review={"reviewAnswer": "GREEN"})
+        out = self._apply(event)
+        self.assertEqual(out["result"], "applied")
+        attempt = self._attempts()[0]
+        self.assertEqual(attempt["status"], "retry_requested")
+        # The provider-confirmed RED summary persists — not the incoming
+        # ambiguous event's GREEN.
+        self.assertEqual(attempt["review_answer"], "RED")
+        self.assertEqual(attempt["review_reject_type"], "RETRY")
+
+    # --- concurrency: equal timestamps cannot double-apply -------------------
+
+    def test_equal_timestamp_second_event_cannot_apply_without_reconcile(self):
+        # Two deliveries at the same provider instant: the first applies,
+        # the second is ambiguous inside the lock — never a blind overwrite.
+        self._mk_attempt()
+        first = self._ev(ms="2026-10-08 10:00:00.000",
+                         review={"reviewAnswer": "GREEN"})
+        second = self._ev(ms="2026-10-08 10:00:00.000",
+                          review={"reviewAnswer": "RED",
+                                  "reviewRejectType": "FINAL"})
+        out1 = self._apply(first)
+        out2 = self._apply(second)
+        self.assertEqual(out1["result"], "applied")
+        # The service-level equal-ts rule marks it ambiguous; the fixture
+        # cannot reconcile, so it is recorded but not applied.
+        self.assertEqual(out2["result"], "ambiguous_not_applied")
+        self.assertEqual(self._attempts()[0]["status"], "verified")
+
+    def test_concurrent_equal_timestamp_events_single_verdict(self):
+        import asyncio
+        self._mk_attempt()
+        green = self._ev(ms="2026-10-08 10:00:00.000",
+                         review={"reviewAnswer": "GREEN"})
+        red = self._ev(ms="2026-10-08 10:00:00.000",
+                       review={"reviewAnswer": "RED",
+                               "reviewRejectType": "FINAL"})
+
+        async def both():
+            return await asyncio.gather(
+                apply_webhook_event(self.ctx, green),
+                apply_webhook_event(self.ctx, red),
+            )
+
+        results = asyncio.run(both())
+        outcomes = sorted(r["result"] for r in results)
+        # Exactly one verdict applies; the equal-timestamp rival is
+        # reconciled-or-rejected, never a silent overwrite.
+        self.assertEqual(outcomes, ["ambiguous_not_applied", "applied"])
+        statuses = {r["result"]: r.get("status") for r in results}
+        self.assertEqual(
+            self._attempts()[0]["status"], statuses["applied"],
+        )
 
 
 class SumsubClientContractTests(unittest.TestCase):

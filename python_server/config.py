@@ -136,6 +136,7 @@ class Settings:
     sumsub_webhook_secret: Optional[str] = field(default=None, repr=False)
     sumsub_level_name: Optional[str] = None
     sumsub_sdk_token_ttl_seconds: int = 1200
+    sumsub_fixture_receiver_token: Optional[str] = field(default=None, repr=False)
 
 
 def _resolve_database_url() -> Optional[str]:
@@ -213,4 +214,5 @@ def load_settings() -> Settings:
         sumsub_webhook_secret=os.getenv("SUMSUB_WEBHOOK_SECRET"),
         sumsub_level_name=os.getenv("SUMSUB_LEVEL_NAME"),
         sumsub_sdk_token_ttl_seconds=int(os.getenv("SUMSUB_SDK_TOKEN_TTL_SECONDS", "1200")),
+        sumsub_fixture_receiver_token=os.getenv("SUMSUB_FIXTURE_RECEIVER_TOKEN"),
     )

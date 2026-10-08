@@ -169,21 +169,41 @@ fold onto one event row (replay-safe), while distinct events of the same
 type on the same applicant are kept.
 
 **Attempt binding:** `externalUserId` alone is never sufficient
-authority. The resolver requires an exact applicantId match against the
-bound attempt (a mismatched applicantId is `unmatched` — never applied),
-then compares the event's provider `createdAtMs` to the attempt's
-`started_at`/`cycle_started_at`: older ⇒ `stale`; equal or missing ⇒
-ambiguous ⇒ provider-status reconcile, applied only when the reconcile
-answer agrees; reconcile failure ⇒ not applied. When the provider event
-carries a review-cycle id (`inspectionId`) it must match the attempt's
-recorded `provider_review_id` — a prior-cycle event delivered after a new
-attempt starts cannot verify the new cycle.
+authority. The resolver requires an exact applicantId match against bound
+attempts (mismatch ⇒ `binding_mismatch`, never applied) and, when both
+sides assert one, a compatible `levelName`. Retry cycles reuse the same
+provider applicant, and `inspectionId` is an applicant-scoped identifier
+(deprecated in the provider docs) — NOT a per-cycle identity — so it is
+recorded and cross-checked but never routes an event. With multiple
+cycles sharing the binding, the owning cycle is resolved by the event's
+provider `createdAtMs` against recorded attempt start times (the cycle
+window `[started_at, next_started_at)`): a newer event with the SAME
+inspectionId binds the current cycle; an event inside an older window
+binds that older cycle (disposition `prior_cycle`); an event predating
+all recorded cycles, a missing timestamp, or an inspectionId
+contradicting a recorded one is `ambiguous` ⇒ authenticated provider
+reconcile, applied only when the reconcile confirms; reconcile failure ⇒
+recorded but not applied.
 
-**Ordering/staleness:** each applied event records its `createdAtMs`. An
-event older than the last applied event cannot regress the status — it is
-stored as `out_of_order` and, in provider modes, a status reconcile call is
-scheduled against the authenticated API (event timestamps are not proof of
-freshness). Terminal `verified`/`declined` is not regressed; a legitimate
+**Ordering/staleness:** each applied event records its `createdAtMs`. The
+ordering guard is revalidated inside the attempt row lock in `apply_event`,
+so two deliveries that resolved before either committed cannot both apply:
+strictly older ⇒ `stale`; an equal provider timestamp ⇒ `ambiguous`
+(recorded, not applied) unless the apply carries an explicit
+provider-confirmed verdict from reconciliation. The row lock is never held
+across a provider call — reconciliation happens beforehand and only its
+verdict enters the transaction.
+
+**Reconciliation** (`GET /resources/applicants/{id}/status`) requires a
+FINAL review status before any verdict applies: only `completed` maps a
+reviewAnswer to a status (`GREEN`→verified, `RED+RETRY`→retry_requested,
+`RED+FINAL`→declined, `RED`/unrecognised⇒review_required). Interim
+statuses (`init`/`pending`/`prechecked`/`queued`/`awaitingUser`) map to
+`pending`; `onHold` ⇒ `review_required`; missing/unrecognised status ⇒
+reconcile fails and the event is not applied. A GREEN answer alone is
+never an approval — the provider documents GREEN appearing in onHold —
+and the persisted review summary is the provider-confirmed one, not the
+ambiguous incoming event's. Terminal `verified`/`declined` is not regressed; a legitimate
 new cycle (reset → pending → reviewed) proceeds only through events newer
 than the terminal event's provider time. Equal timestamps are treated as
 ambiguous → reconcile, not applied.
@@ -214,13 +234,15 @@ FastAPI (`/api/v1`):
   retries), `401` invalid/missing signature or unsupported algorithm,
   `400` malformed/oversized/environment-mismatched payload.
 - `POST /api/v1/webhooks/sumsub-fixture` — **fixture mode only** (404 in
-  every other mode), and inside fixture mode still restricted to an
-  authorised local demo boundary: loopback client host plus the
-  `X-Dev-Fixture: 1` request header; anything else is 404. Enabling fixture
-  mode on a reachable host therefore does not create a general
-  unauthenticated status injector. The route injects a labelled synthetic
-  event through the same dedupe/binding/apply path so the offline demo
-  exercises real code.
+  every other mode), and inside fixture mode still closed unless explicitly
+  enabled: it requires the operator-set `SUMSUB_FIXTURE_RECEIVER_TOKEN`
+  credential, presented in the `X-Dev-Fixture-Token` request header and
+  compared in constant time, AND a loopback peer. A missing/unconfigured
+  token, a wrong/absent header, or a non-loopback peer all get 404 — so
+  fixture mode on a reachable host is never an unauthenticated status
+  injector, and a fixed header value alone is not treated as
+  authentication. The route injects a labelled synthetic event through the
+  same dedupe/binding/apply path so the offline demo exercises real code.
 - `GET /api/v1/id-verification/provider-status` is NOT a route — server-side
   reconcile happens inside the service (authenticated GET applicant status),
   not via a browser-callable endpoint.
@@ -275,7 +297,10 @@ evidence depth via status API; NFC is MobileSDK-only and out of scope.
 1. Repo deps: `npm install` (adds `@sumsub/websdk-react@2.9.0` — browser SDK
    for sandbox mode only) and `python_server` deps per repo convention.
 2. FastAPI env (same `.env` the service reads):
-   - Fixture demo (default for local review): `SUMSUB_MODE=fixture`
+   - Fixture demo (default for local review): `SUMSUB_MODE=fixture` AND
+     `SUMSUB_FIXTURE_RECEIVER_TOKEN=<choose-a-local-token>` — the second
+     variable explicitly enables the local simulation receiver (unset ⇒
+     the endpoint is closed).
    - Disabled: `SUMSUB_MODE=off` — all verification routes answer
      `503 configuration_unavailable`.
    - Sandbox (needs the deferred account): `SUMSUB_MODE=sandbox` + the five
@@ -293,14 +318,14 @@ Fixture demo walkthrough (no Sumsub account needed):
 
 ```powershell
 # FastAPI terminal
-$env:SUMSUB_MODE='fixture'; $env:PORT='3100'; python main.py
+$env:SUMSUB_MODE='fixture'; $env:SUMSUB_FIXTURE_RECEIVER_TOKEN='local-demo-token'; $env:PORT='3100'; python main.py
 # BFF terminal
 $env:PORT='3000'; $env:DEEDLY_API_BASE_URL='http://localhost:3100'; npm run dev:server
 # Browser: open a saved matter -> Parties -> a saved person party -> "Verify identity"
 #  -> "Start verification" shows the labelled simulated session.
 # Inject a synthetic outcome through the same apply path the real webhook uses:
 curl -X POST http://localhost:3100/api/v1/webhooks/sumsub-fixture `
-  -H 'Content-Type: application/json' -H 'X-Dev-Fixture: 1' `
+  -H 'Content-Type: application/json' -H 'X-Dev-Fixture-Token: local-demo-token' `
   -d '{"type":"applicantReviewed","applicantId":"FIXTURE-APPLICANT-0001","externalUserId":"<from the session attempt>","createdAtMs":"2026-10-08 10:00:00.000","reviewResult":{"reviewAnswer":"GREEN"}}'
 # "Refresh status" in the panel then shows Verified + Simulated.
 ```
@@ -368,10 +393,10 @@ All offline; Node 24.x, Python 3.12, Playwright/Chromium.
 
 | Suite | Command | Result |
 |---|---|---|
-| Python id-verification + readiness | `python -m unittest tests.test_id_verification tests.test_readiness` (from `python_server/`) | 80 run, **80 pass**, 1 skipped — the durable-Postgres `apply_event` integration class is opt-in under `TEST_DATABASE_URL` and was skipped (no disposable DB configured); durable DB coverage is therefore NOT claimed |
+| Python id-verification + readiness | `python -m unittest tests.test_id_verification tests.test_readiness` (from `python_server/`) | 94 run, **93 pass**, 1 skipped — the durable-Postgres `apply_event` integration class is opt-in under `TEST_DATABASE_URL` and was skipped (no disposable DB configured); durable DB coverage is therefore NOT claimed |
 | Frontend id-verification | `npx tsx --test src/components/transfers/IdVerificationPanel.test.tsx src/lib/api/idVerification.test.ts` | **11/11 pass** |
 | BFF party/matter proxies | `npx tsx --test server/tests/v1MatterParties.test.ts server/tests/v1MatterEditing.test.ts` | **24/24 pass** |
-| Mounted browser harness | `npx vite build --config vite.config.idv.ts` + `node scripts/idv-harness-check.mjs` | **18/18 checks pass** — entry from party card, capture stays mounted through readiness/step/progress messages, token-expiry refresh keeps capture alive, completion/cancel exit to status, event→status, reload persistence, subject switching, representative panel, fixture-simulated capture, 390px layout; 0 external requests, 0 page errors |
+| Mounted browser harness | `npx vite build --config vite.config.idv.ts` + `node scripts/idv-harness-check.mjs` | **19/19 checks pass** — entry from party card, capture stays mounted through readiness/step/progress messages AND general `applicantStatus`/`onApplicantStatusChanged` payloads (interim AND final-looking), token-expiry refresh keeps capture alive, the documented `onApplicantVerificationCompleted` event exits to status, cancel exits, event→status, reload persistence, subject switching, representative panel, fixture-simulated capture, 390px layout; 0 external requests, 0 page errors |
 | Typecheck | `npx tsc --noEmit` | clean |
 | App build | `npm run build` | clean |
 | Whitespace | `git diff --check` | clean |
@@ -387,10 +412,18 @@ Review-fix regressions covered in `tests/test_id_verification.py`: durable
 event insert contract (id/datetime/sanitised errors), post-insert failure
 → resumable replay → applied (fault injection), concurrent events on one
 attempt, cross-attempt/previous-cycle/mismatched-applicant/old/equal/
-missing-timestamp event binding, reconcile-failure-not-applied, `/one`
-lookup path + signing input + create/404/conflict/ambiguous-recovery,
+missing-timestamp event binding, **same-applicant retry lifecycle**
+(newer event with unchanged applicant/inspection ids binds the current
+cycle; in-window event binds the older cycle; predates-all-cycles needs
+reconcile), reconcile reviewStatus contract (onHold+GREEN ⇒ review
+required, pending+GREEN ⇒ pending, missing/unknown status ⇒ not applied,
+completed+GREEN ⇒ verified, completed+RED ⇒ retry_requested with the
+provider-confirmed summary persisted), equal-timestamp concurrent events
+cannot double-apply, reconcile-failure-not-applied, `/one` lookup path +
+signing input + create/404/conflict/ambiguous-recovery,
 `on_behalf_of_party_id` persistence + reload/switch, fixture-route
-loopback+header boundary, server-side start/retry transition policy
+loopback+operator-token boundary (no token ⇒ closed, wrong/absent header
+⇒ 404, non-loopback ⇒ 404), server-side start/retry transition policy
 (verified/started/pending/retry_requested/declined/review_required/
 no-open-attempt).
 

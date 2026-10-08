@@ -46,7 +46,7 @@ class AttemptRepository(Protocol):
     async def list_attempts_by_applicant_id(self, environment: str, applicant_id: str) -> List[dict]: ...
     async def create_attempt(self, attempt: dict) -> dict: ...
     async def update_attempt_fields(self, attempt_id: str, fields: dict) -> dict: ...
-    async def apply_event(self, event: dict, *, attempt_id: Optional[str], fields: Optional[dict], incoming_ts: Optional[float], mark_processed: bool = True) -> dict:
+    async def apply_event(self, event: dict, *, attempt_id: Optional[str], fields: Optional[dict], incoming_ts: Optional[float], mark_processed: bool = True, confirmed: bool = False) -> dict:
         """Atomic event receipt + state application. See implementations."""
         ...
     async def list_events_for_attempt(self, attempt_id: str) -> List[dict]: ...
@@ -201,6 +201,7 @@ class PostgresIdVerificationRepository:
         fields: Optional[dict],
         incoming_ts: Optional[float],
         mark_processed: bool = True,
+        confirmed: bool = False,
     ) -> dict:
         """Atomically (a) dedupe-insert the event, (b) apply the attempt
         update under the attempt row lock with the staleness guard re-checked
@@ -209,7 +210,15 @@ class PostgresIdVerificationRepository:
         An insert-then-update failure rolls the whole transaction back, so a
         replay re-runs the full path; a previously *unprocessed* stored event
         is resumed rather than reported as duplicate.
-        Returns {"outcome": "applied"|"stale"|"recorded"|"duplicate"}.
+
+        Ordering is revalidated under the row lock so two deliveries that
+        resolved before either committed cannot both apply: strictly older
+        than the last applied event is ``stale``; an equal provider
+        timestamp is ``ambiguous`` and never applies — only an explicitly
+        ``confirmed`` (provider-reconciled) apply may proceed on equality.
+        The lock is never held across a provider call; reconciliation
+        happens beforehand and only its verdict enters the transaction.
+        Returns {"outcome": "applied"|"stale"|"ambiguous"|"recorded"|"duplicate"}.
         """
         async def work(conn) -> dict:
             cols = list(event.keys())
@@ -253,6 +262,13 @@ class PostgresIdVerificationRepository:
                         [event_id], connection=conn,
                     )
                     outcome = "stale"
+                elif (incoming_ts is not None and last_ts is not None
+                      and incoming_ts == last_ts and not confirmed):
+                    await db.query(
+                        "UPDATE id_verification_events SET disposition='ambiguous_not_applied' WHERE id=$1",
+                        [event_id], connection=conn,
+                    )
+                    outcome = "ambiguous"
                 else:
                     sets = ", ".join(f"{k} = ${i+2}" for i, k in enumerate(fields.keys()))
                     upd = (
@@ -377,11 +393,14 @@ class InMemoryIdVerificationRepository:
         fields: Optional[dict],
         incoming_ts: Optional[float],
         mark_processed: bool = True,
+        confirmed: bool = False,
     ) -> dict:
         """In-memory mirror of the durable apply_event: one critical section
         (the lock serialises application), unprocessed stored events resume,
-        and a failed attempt update rolls the staged insert back — the same
-        transaction semantics the Postgres implementation provides."""
+        a failed attempt update rolls the staged insert back, and ordering is
+        revalidated inside the critical section — strictly older is stale,
+        an equal timestamp is ambiguous unless provider-confirmed. Same
+        transaction semantics as the Postgres implementation."""
         with self._lock:
             dedupe = (event["environment"], event["dedupe_key"])
             staged = False
@@ -409,6 +428,10 @@ class InMemoryIdVerificationRepository:
                     if incoming_ts is not None and last_ts is not None and incoming_ts < last_ts:
                         row["disposition"] = "out_of_order"
                         outcome = "stale"
+                    elif (incoming_ts is not None and last_ts is not None
+                          and incoming_ts == last_ts and not confirmed):
+                        row["disposition"] = "ambiguous_not_applied"
+                        outcome = "ambiguous"
                     else:
                         self._apply_fields(attempt, fields)
                         outcome = "applied"

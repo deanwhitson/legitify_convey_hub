@@ -79,6 +79,17 @@ await emit('idCheck.onApplicantLoaded')
 await page.waitForTimeout(300)
 check('capture stays mounted through progress messages',
   await page.locator('[data-testid="mock-sumsub-sdk"]').count() === 1)
+
+// General status-change messages carry reviewStatus/reviewResult and are
+// NOT completion — they must keep the SDK mounted even with final-looking
+// or resubmission payloads.
+await emit('idCheck.onApplicantStatusChanged', { reviewStatus: 'awaitingUser' })
+await emit('idCheck.applicantStatus', { reviewStatus: 'init' })
+await emit('idCheck.onApplicantStatusChanged',
+  { reviewStatus: 'completed', reviewResult: { reviewAnswer: 'GREEN' } })
+await page.waitForTimeout(300)
+check('capture stays mounted through general status-change messages',
+  await page.locator('[data-testid="mock-sumsub-sdk"]').count() === 1)
 await shot('01-progress-stays-mounted')
 
 // token expiry → expirationHandler hits the refresh endpoint
@@ -89,8 +100,8 @@ check('expirationHandler calls the refresh endpoint', refreshCalls >= 1)
 check('capture still mounted after token renewal',
   await page.locator('[data-testid="mock-sumsub-sdk"]').count() === 1)
 
-// completion event → leaves capture → status view
-await emit('idCheck.onApplicantSubmitted')
+// documented completion event → leaves capture → status view
+await emit('idCheck.onApplicantVerificationCompleted')
 await page.waitForTimeout(400)
 check('completion signal leaves the capture view',
   await page.locator('[data-testid="mock-sumsub-sdk"]').count() === 0)
