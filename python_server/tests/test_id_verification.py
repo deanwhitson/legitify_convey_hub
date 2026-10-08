@@ -743,6 +743,23 @@ class SumsubClientSigningTests(unittest.TestCase):
 
 
 
+class _ApplyBarrierRepo(InMemoryIdVerificationRepository):
+    """Adds one deterministic suspension point at the head of apply_event
+    so two deliveries can both resolve and reach the critical section before
+    either commits — the in-memory equivalent of the durable repository's
+    real I/O interleaving inside the row lock."""
+
+    def __init__(self):
+        super().__init__()
+        self.gate = asyncio.Event()
+        self.calls = 0
+
+    async def apply_event(self, *args, **kwargs):
+        self.calls += 1
+        await self.gate.wait()
+        return await super().apply_event(*args, **kwargs)
+
+
 class WebhookApplySemanticsTests(unittest.TestCase):
     """F2/F3 regressions: atomic apply, resumable events, cycle binding,
     applicant cross-checks and reconcile-on-ambiguity."""
@@ -1199,7 +1216,26 @@ class WebhookApplySemanticsTests(unittest.TestCase):
         self.assertEqual(self._attempts()[0]["status"], "verified")
 
     def test_concurrent_equal_timestamp_events_single_verdict(self):
+        green, red = self._equal_ts_race()
+        applied = self._attempts()[0]["status"]
+        self.assertIn(applied, ("verified", "declined"))
+        # The loser is recorded but unprocessed — the ack was refused (503),
+        # so the provider redelivers rather than the event being lost.
+        unprocessed = [e for e in self.repo._events.values()
+                       if e["processed_at"] is None]
+        self.assertEqual(len(unprocessed), 1)
+        self.assertEqual(
+            unprocessed[0]["disposition"], "ambiguous_not_applied")
+
+    def _equal_ts_race(self):
+        """Run the deterministic equal-timestamp race on a barrier repo:
+        both deliveries resolve and enter apply_event before either
+        commits — the in-memory equivalent of the durable repository's
+        in-lock interleaving. Returns (green, red)."""
         import asyncio
+        repo = _ApplyBarrierRepo()
+        self.ctx.repository = repo
+        self.repo = repo
         self._mk_attempt()
         green = self._ev(ms="2026-10-08 10:00:00.000",
                          review={"reviewAnswer": "GREEN"})
@@ -1208,20 +1244,60 @@ class WebhookApplySemanticsTests(unittest.TestCase):
                                "reviewRejectType": "FINAL"})
 
         async def both():
-            return await asyncio.gather(
-                apply_webhook_event(self.ctx, green),
-                apply_webhook_event(self.ctx, red),
-            )
+            t_g = asyncio.create_task(apply_webhook_event(self.ctx, green))
+            t_r = asyncio.create_task(apply_webhook_event(self.ctx, red))
+            while repo.calls < 2:
+                await asyncio.sleep(0)
+            repo.gate.set()
+            return await asyncio.gather(t_g, t_r, return_exceptions=True)
 
         results = asyncio.run(both())
-        outcomes = sorted(r["result"] for r in results)
-        # Exactly one verdict applies; the equal-timestamp rival is
-        # reconciled-or-rejected, never a silent overwrite.
-        self.assertEqual(outcomes, ["ambiguous_not_applied", "applied"])
-        statuses = {r["result"]: r.get("status") for r in results}
-        self.assertEqual(
-            self._attempts()[0]["status"], statuses["applied"],
-        )
+        applied = [r for r in results
+                   if isinstance(r, dict) and r["result"] == "applied"]
+        pending = [r for r in results if isinstance(r, ReconcilePendingError)]
+        # Exactly one verdict applies; the equal-timestamp rival loses the
+        # row-lock race and is left unprocessed.
+        self.assertEqual(len(applied), 1)
+        self.assertEqual(len(pending), 1)
+        return green, red
+
+    def test_ambiguous_loser_replay_is_evaluated_not_lost(self):
+        # Replay the event that lost the equal-timestamp race: the winner's
+        # redelivery still dedupes, while the loser is re-evaluated — in
+        # fixture mode there is no provider to reconcile, so it is durably
+        # recorded ambiguous_not_applied (processed), never lost.
+        green, red = self._equal_ts_race()
+        status_after = self._attempts()[0]["status"]
+        out_g = self._apply(green)
+        out_r = self._apply(red)
+        outcomes = sorted((out_g["result"], out_r["result"]))
+        self.assertEqual(outcomes, ["ambiguous_not_applied", "duplicate"])
+        for e in self.repo._events.values():
+            self.assertIsNotNone(e["processed_at"])
+        self.assertEqual(self._attempts()[0]["status"], status_after)
+
+    def test_ambiguous_loser_replay_reconciles_to_provider_verdict(self):
+        # Sandbox replay: the provider-confirmed verdict converges with the
+        # committed winner — the retried event applies safely rather than
+        # staying a permanent unprocessed residue.
+        green, red = self._equal_ts_race()
+        winner_status = self._attempts()[0]["status"]
+        self._provider_ctx(
+            {"reviewStatus": "completed",
+             "reviewResult": {"reviewAnswer": "GREEN"}}
+            if winner_status == "verified" else
+            {"reviewStatus": "completed",
+             "reviewResult": {"reviewAnswer": "RED",
+                              "reviewRejectType": "FINAL"}})
+        replays = [self._apply(green), self._apply(red)]
+        retried = [o for o in replays if o["result"] != "duplicate"]
+        self.assertEqual(len(retried), 1)
+        self.assertEqual(retried[0]["result"], "applied")
+        self.assertEqual(retried[0]["status"], winner_status)
+        self.assertEqual(self._attempts()[0]["status"], winner_status)
+        for e in self.repo._events.values():
+            self.assertIsNotNone(e["processed_at"])
+
 
 
 def _rs(review_status, answer, reject_type=None):
@@ -1472,6 +1548,7 @@ class ReconcileVersionRaceTests(unittest.TestCase):
         ))
         self.assertEqual(out3["outcome"], "applied")
         self.assertEqual(self._attempt()["status"], "verified")
+
 
 
 
@@ -1822,6 +1899,48 @@ class DurableRepositoryContractTests(unittest.TestCase):
         self.assertEqual(out3["outcome"], "applied")
         self.assertEqual(latest["version"] + 1, 2)
 
+
+
+    def test_equal_timestamp_ambiguous_unprocessed_until_confirmed(self):
+        # Durable contract: an equal provider timestamp under the row lock
+        # returns ambiguous AND leaves the event unprocessed — the webhook
+        # ack is refused so the provider redelivers; a provider-confirmed
+        # retry then applies it.
+        import asyncio
+        repo = self._repo()
+        attempt = asyncio.run(repo.create_attempt(self._attempt_row()))
+        ts = datetime(2026, 10, 8, 10, 0, tzinfo=timezone.utc).timestamp()
+        fields = {"status": "verified",
+                  "last_event_created_at_ms": "2026-10-08 10:00:00.000"}
+        out1 = asyncio.run(repo.apply_event(
+            self._event_row(attempt["id"]), attempt_id=attempt["id"],
+            fields=fields, incoming_ts=ts))
+        self.assertEqual(out1["outcome"], "applied")
+
+        rival = self._event_row(attempt["id"])
+        rival["dedupe_key"] = "equal-ts-rival"
+        rival["review_answer"] = "RED"
+        out2 = asyncio.run(repo.apply_event(
+            rival, attempt_id=attempt["id"],
+            fields={"status": "declined",
+                    "last_event_created_at_ms": "2026-10-08 10:00:00.000"},
+            incoming_ts=ts))
+        self.assertEqual(out2["outcome"], "ambiguous")
+        events = asyncio.run(repo.list_events_for_attempt(attempt["id"]))
+        unprocessed = [e for e in events if e["processed_at"] is None]
+        self.assertEqual(len(unprocessed), 1)
+        self.assertEqual(unprocessed[0]["dedupe_key"], "equal-ts-rival")
+        latest = asyncio.run(repo.get_latest_attempt(
+            "sandbox", AI, attempt["transfer_party_id"]))
+        self.assertEqual(latest["status"], "verified")
+
+        # Provider-confirmed redelivery applies the rival verdict.
+        out3 = asyncio.run(repo.apply_event(
+            rival, attempt_id=attempt["id"],
+            fields={"status": "declined",
+                    "last_event_created_at_ms": "2026-10-08 10:00:00.000"},
+            incoming_ts=ts, confirmed=True))
+        self.assertEqual(out3["outcome"], "applied")
 
 
 if __name__ == "__main__":

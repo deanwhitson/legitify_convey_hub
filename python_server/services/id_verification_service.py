@@ -741,9 +741,13 @@ async def apply_webhook_event(
     if out["outcome"] == "stale":
         return {"result": "stale_ignored", "disposition": "out_of_order"}
     if out["outcome"] == "ambiguous":
-        # A concurrent write reordered under the row lock — recorded, not
-        # applied; redelivery reconciles again against fresh state.
-        return {"result": "ambiguous_not_applied", "disposition": "ambiguous_not_applied"}
+        # A concurrent write committed under the row lock while this apply
+        # was in flight — recorded unprocessed, never acknowledged. Refusing
+        # the ack lets redelivery re-evaluate the event against the
+        # now-committed state (reconcile in sandbox, recorded not-applied
+        # otherwise) — bounded, not an infinite retry of the same stale
+        # view.
+        raise ReconcilePendingError()
     if out["outcome"] == "conflict":
         # The attempt version moved while the provider lookup was in flight —
         # the reconciled snapshot is stale. The event was left unprocessed,

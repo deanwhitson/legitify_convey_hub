@@ -192,7 +192,10 @@ strictly older ⇒ `stale`; an equal provider timestamp ⇒ `ambiguous`
 (recorded, not applied) unless the apply carries an explicit
 provider-confirmed verdict from reconciliation. A timestamp-less event
 never writes `NULL` over `last_event_created_at_ms` — only a
-provider-supplied timestamp may advance the ordering watermark.
+provider-supplied timestamp may advance the ordering watermark. `ambiguous`
+and `conflict` outcomes never mark the event processed — acknowledging an
+unapplied event would lose it; the webhook ack is refused (503) and
+provider redelivery resumes it.
 
 **Reconcile state-version revalidation:** every attempt carries a
 monotonic `version` bumped on each applied update. When an event needs

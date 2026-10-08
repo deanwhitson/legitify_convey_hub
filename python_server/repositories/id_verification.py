@@ -222,7 +222,9 @@ class PostgresIdVerificationRepository:
         the attempt's state version is compared under the same lock: if the
         state moved while the provider lookup was in flight the apply is
         refused with ``conflict`` and the event is left unprocessed, so
-        redelivery resumes it against fresh state. The lock is never held
+        redelivery resumes it against fresh state. ``ambiguous`` and
+        ``conflict`` outcomes never mark the event processed — acknowledging
+        an unapplied event would lose it. The lock is never held
         across a provider call; reconciliation happens beforehand and only
         its verdict plus the pre-lookup version enters the transaction.
         Returns {"outcome": "applied"|"stale"|"ambiguous"|"conflict"|"recorded"|"duplicate"}.
@@ -295,7 +297,7 @@ class PostgresIdVerificationRepository:
                     await db.query(upd, [attempt_id, *fields.values()], connection=conn)
                     outcome = "applied"
 
-            if mark_processed and outcome != "conflict":
+            if mark_processed and outcome not in ("conflict", "ambiguous"):
                 await db.query(
                     "UPDATE id_verification_events SET processed_at = now() WHERE id=$1",
                     [event_id], connection=conn,
@@ -459,7 +461,7 @@ class InMemoryIdVerificationRepository:
                     else:
                         self._apply_fields(attempt, fields)
                         outcome = "applied"
-                if mark_processed and outcome != "conflict":
+                if mark_processed and outcome not in ("conflict", "ambiguous"):
                     row["processed_at"] = datetime.now(timezone.utc).isoformat()
                 return {"outcome": outcome}
             except Exception:
