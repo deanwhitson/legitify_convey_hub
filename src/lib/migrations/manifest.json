@@ -169,9 +169,9 @@
     },
     {
       "file": "030_deedly_id_verification.sql",
-      "sha256": "8b73c1f83d176a13c45f79cb6afae236c92bc7270a7e4194e71582f7aa47f314",
+      "sha256": "71b98442fb30e879310aef114dda2a1768abfd235598d05fabeab2901adace38",
       "eol": "lf",
-      "bytes": 4369
+      "bytes": 4479
     }
   ]
 }

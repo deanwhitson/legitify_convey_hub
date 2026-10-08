@@ -190,9 +190,21 @@ ordering guard is revalidated inside the attempt row lock in `apply_event`,
 so two deliveries that resolved before either committed cannot both apply:
 strictly older ⇒ `stale`; an equal provider timestamp ⇒ `ambiguous`
 (recorded, not applied) unless the apply carries an explicit
-provider-confirmed verdict from reconciliation. The row lock is never held
-across a provider call — reconciliation happens beforehand and only its
-verdict enters the transaction.
+provider-confirmed verdict from reconciliation. A timestamp-less event
+never writes `NULL` over `last_event_created_at_ms` — only a
+provider-supplied timestamp may advance the ordering watermark.
+
+**Reconcile state-version revalidation:** every attempt carries a
+monotonic `version` bumped on each applied update. When an event needs
+provider reconciliation, the service captures `attempt.version` BEFORE
+the authenticated status lookup and passes it as `expected_version` to
+`apply_event`. The row lock is never held across the provider call;
+under the lock the current version is compared, and a mismatch (a newer
+decision committed while the lookup was in flight) returns `conflict` —
+the event is left unprocessed (`processed_at` NULL), the ack is refused
+(503), and provider redelivery resumes it to re-reconcile against the
+now-current state. This replaces the earlier `confirmed` boolean, which
+could let a stale reconcile snapshot overwrite a newer committed verdict.
 
 **Reconciliation** (`GET /resources/applicants/{id}/status`) requires a
 FINAL review status before any verdict applies: only `completed` maps a
@@ -419,7 +431,11 @@ reconcile), reconcile reviewStatus contract (onHold+GREEN ⇒ review
 required, pending+GREEN ⇒ pending, missing/unknown status ⇒ not applied,
 completed+GREEN ⇒ verified, completed+RED ⇒ retry_requested with the
 provider-confirmed summary persisted), equal-timestamp concurrent events
-cannot double-apply, reconcile-failure-not-applied, `/one` lookup path +
+cannot double-apply, reconcile-failure-not-applied, delayed-reconcile
+state-version races (barrier-driven: missing-timestamp GREEN→RED and
+RED→GREEN interleavings, equal-timestamp conflict, retry convergence,
+watermark preservation, and the repo-level `expected_version` contract
+on both implementations), `/one` lookup path +
 signing input + create/404/conflict/ambiguous-recovery,
 `on_behalf_of_party_id` persistence + reload/switch, fixture-route
 loopback+operator-token boundary (no token ⇒ closed, wrong/absent header

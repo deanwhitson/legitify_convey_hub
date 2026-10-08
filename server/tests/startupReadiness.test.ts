@@ -407,5 +407,5 @@ test('readiness output contains only fixed labels — no connection details', as
   for (const bad of [SECRET, 'db.example.internal', 'connection refused', 'host']) {
     assert.ok(!body.includes(bad), body)
   }
-  assert.equal(expectedMigrationCount(MANIFEST), 27)
+  assert.equal(expectedMigrationCount(MANIFEST), 28)
 })

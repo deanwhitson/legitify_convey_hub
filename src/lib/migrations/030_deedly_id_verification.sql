@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS transfers.id_verification_attempts (
     last_correlation_id         TEXT,
     last_event_created_at_ms    TEXT,
     last_event_type             TEXT,
+    version                     INTEGER NOT NULL DEFAULT 0,  -- state version, bumped on every applied update
     simulated                   BOOLEAN NOT NULL DEFAULT FALSE,
     created_at                  TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at                  TIMESTAMPTZ NOT NULL DEFAULT now(),

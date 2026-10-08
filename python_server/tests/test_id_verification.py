@@ -1224,6 +1224,258 @@ class WebhookApplySemanticsTests(unittest.TestCase):
         )
 
 
+def _rs(review_status, answer, reject_type=None):
+    from clients.sumsub_client import ReviewStatus
+    return ReviewStatus(
+        review_status=review_status, review_answer=answer,
+        review_reject_type=reject_type, reject_labels=(), level_name=None,
+    )
+
+
+class _GatedReconcileClient(SumsubApiClient):
+    """Deterministic barrier client for reconcile-vs-commit races: the first
+    review-status lookup signals ``entered`` and blocks on ``gate`` so the
+    test can commit newer attempt state while a provider reconciliation is
+    provably in flight; subsequent calls answer immediately."""
+
+    def __init__(self, config, statuses):
+        import httpx
+        super().__init__(
+            config,
+            transport=httpx.MockTransport(lambda r: httpx.Response(500, json={})),
+        )
+        self._statuses = list(statuses)
+        self.entered = asyncio.Event()
+        self.gate = asyncio.Event()
+        self.calls = 0
+
+    async def get_applicant_review_status(self, applicant_id):
+        self.calls += 1
+        idx = min(self.calls - 1, len(self._statuses) - 1)
+        if self.calls == 1:
+            self.entered.set()
+            await self.gate.wait()
+        return self._statuses[idx]
+
+
+class ReconcileVersionRaceTests(unittest.TestCase):
+    """Third-review P1: a delayed provider reconciliation must not overwrite
+    a newer committed decision. The apply revalidates the attempt state
+    version captured before the provider lookup; a mismatch leaves the
+    event unprocessed so a redelivery re-reconciles fresh state."""
+
+    def setUp(self):
+        self.config = IdVerificationConfig(
+            mode="sandbox", environment="sandbox", webhook_secret="s",
+        )
+        self.repo = InMemoryIdVerificationRepository()
+        self.ctx = VerificationContext(self.config, self.repo, FixtureSumsubClient())
+        self.ext_ref = build_external_ref("sandbox", AI, PERSON_PARTY_ID)
+
+    def _client_cfg(self):
+        return IdVerificationConfig(
+            mode="sandbox", environment="sandbox",
+            app_token="t", app_secret="s", base_url="https://api.sumsub.com",
+        )
+
+    def _mk_attempt(self, last_ms=None):
+        attempt = {
+            "id": str(uuid.uuid4()),
+            "environment": "sandbox",
+            "accountable_institution_id": AI,
+            "transfer_id": TRANSFER_ID,
+            "transfer_party_id": PERSON_PARTY_ID,
+            "subject_kind": "party",
+            "on_behalf_of_party_id": None,
+            "attempt_no": 1,
+            "external_ref": self.ext_ref,
+            "provider": "sumsub",
+            "provider_applicant_id": "app-1",
+            "level_name": "idv-poc-level",
+            "inspection_id": None,
+            "status": "started",
+            "simulated": False,
+            "last_event_created_at_ms": last_ms,
+            "created_at": "2026-10-08T09:00:00+00:00",
+            "updated_at": "2026-10-08T09:00:00+00:00",
+        }
+        return asyncio.run(self.repo.create_attempt(attempt))
+
+    def _ev(self, ms, review):
+        return {
+            "type": "applicantReviewed",
+            "applicantId": "app-1",
+            "externalUserId": self.ext_ref,
+            "correlationId": f"corr-{uuid.uuid4()}",
+            "createdAtMs": ms,
+            "sandboxMode": True,
+            "reviewResult": review,
+        }
+
+    def _attempt(self):
+        return list(self.repo._attempts.values())[0]
+
+    async def _race(self, stale_event, newer_event, client):
+        """Run the review's interleaving: reconcile lookup in flight ->
+        conflicting newer decision commits -> stale response released."""
+        self.ctx.client = client
+        slow = asyncio.create_task(apply_webhook_event(self.ctx, stale_event))
+        await client.entered.wait()
+        out_newer = await apply_webhook_event(self.ctx, newer_event)
+        client.gate.set()
+        return slow, out_newer
+
+    def test_missing_ts_green_reconcile_cannot_overwrite_committed_red(self):
+        # Review repro: GREEN with no createdAtMs reconciles; a newer
+        # timestamped RED/FINAL commits while the provider call is in
+        # flight; the released stale snapshot must not flip it back.
+        self._mk_attempt()
+        client = _GatedReconcileClient(self._client_cfg(), [
+            _rs("completed", "GREEN"),               # stale in-flight snapshot
+            _rs("completed", "RED", "FINAL"),        # fresh truth on retry
+        ])
+        green = self._ev(None, {"reviewAnswer": "GREEN"})
+        red = self._ev("2026-10-08 10:05:00.000",
+                       {"reviewAnswer": "RED", "reviewRejectType": "FINAL"})
+
+        async def run():
+            slow, out_red = await self._race(green, red, client)
+            self.assertEqual(out_red["result"], "applied")
+            self.assertEqual(out_red["status"], "declined")
+            with self.assertRaises(ReconcilePendingError):
+                await slow
+            attempt = self._attempt()
+            self.assertEqual(attempt["status"], "declined")
+            # The committed watermark survives — never NULLed by the
+            # timestamp-less event.
+            self.assertEqual(
+                attempt["last_event_created_at_ms"], "2026-10-08 10:05:00.000")
+            # The conflicting event was left unprocessed — redelivery resumes
+            # it and re-reconciles against current state.
+            return await apply_webhook_event(self.ctx, green)
+
+        out_retry = asyncio.run(run())
+        self.assertEqual(out_retry["result"], "applied")
+        self.assertEqual(out_retry["status"], "declined")
+        attempt = self._attempt()
+        self.assertEqual(attempt["status"], "declined")
+        self.assertEqual(attempt["review_answer"], "RED")
+        self.assertEqual(attempt["review_reject_type"], "FINAL")
+        self.assertEqual(
+            attempt["last_event_created_at_ms"], "2026-10-08 10:05:00.000")
+        self.assertEqual(client.calls, 2)
+
+    def test_missing_ts_red_reconcile_cannot_overwrite_committed_green(self):
+        # Reverse interleaving: a stale RED/FINAL snapshot must not regress
+        # a committed verified decision.
+        self._mk_attempt()
+        client = _GatedReconcileClient(self._client_cfg(), [
+            _rs("completed", "RED", "FINAL"),        # stale in-flight snapshot
+            _rs("completed", "GREEN"),               # fresh truth on retry
+        ])
+        red = self._ev(None, {"reviewAnswer": "RED", "reviewRejectType": "FINAL"})
+        green = self._ev("2026-10-08 10:05:00.000", {"reviewAnswer": "GREEN"})
+
+        async def run():
+            slow, out_green = await self._race(red, green, client)
+            self.assertEqual(out_green["result"], "applied")
+            self.assertEqual(out_green["status"], "verified")
+            with self.assertRaises(ReconcilePendingError):
+                await slow
+            self.assertEqual(self._attempt()["status"], "verified")
+            return await apply_webhook_event(self.ctx, red)
+
+        out_retry = asyncio.run(run())
+        self.assertEqual(out_retry["result"], "applied")
+        self.assertEqual(out_retry["status"], "verified")
+        self.assertEqual(self._attempt()["status"], "verified")
+
+    def test_equal_ts_reconcile_conflict_then_bounded_retry(self):
+        # Equal provider timestamp: reconcile is required; a newer commit
+        # during the lookup wins; on redelivery the event is now strictly
+        # older than the committed watermark and is recorded stale — bounded,
+        # not an infinite reconcile loop.
+        self._mk_attempt(last_ms="2026-10-08 10:00:00.000")
+        client = _GatedReconcileClient(self._client_cfg(), [
+            _rs("completed", "GREEN"),
+            _rs("completed", "GREEN"),
+        ])
+        green_equal = self._ev("2026-10-08 10:00:00.000",
+                               {"reviewAnswer": "GREEN"})
+        red_newer = self._ev("2026-10-08 10:05:00.000",
+                             {"reviewAnswer": "RED", "reviewRejectType": "FINAL"})
+
+        async def run():
+            slow, out_red = await self._race(green_equal, red_newer, client)
+            self.assertEqual(out_red["status"], "declined")
+            with self.assertRaises(ReconcilePendingError):
+                await slow
+            return await apply_webhook_event(self.ctx, green_equal)
+
+        out_retry = asyncio.run(run())
+        # Now strictly older than the committed 10:05 watermark.
+        self.assertEqual(out_retry["result"], "stale_ignored")
+        self.assertEqual(self._attempt()["status"], "declined")
+        # No second provider call needed — ordering alone resolves it.
+        self.assertEqual(client.calls, 1)
+
+    def test_missing_ts_reconcile_success_preserves_watermark(self):
+        # A timestamp-less event that reconciles successfully applies, but
+        # the last trustworthy provider timestamp is left untouched.
+        self._mk_attempt(last_ms="2026-10-08 10:00:00.000")
+        client = _GatedReconcileClient(self._client_cfg(), [
+            _rs("completed", "GREEN"),
+        ])
+        self.ctx.client = client
+        client.gate.set()  # no race — the lookup answers immediately
+        event = self._ev(None, {"reviewAnswer": "GREEN"})
+        out = asyncio.run(apply_webhook_event(self.ctx, event))
+        self.assertEqual(out["result"], "applied")
+        self.assertEqual(out["status"], "verified")
+        attempt = self._attempt()
+        self.assertEqual(attempt["status"], "verified")
+        self.assertEqual(
+            attempt["last_event_created_at_ms"], "2026-10-08 10:00:00.000")
+        self.assertGreaterEqual(attempt["version"], 1)
+
+    def test_repo_expected_version_conflict_leaves_event_retryable(self):
+        # In-memory contract: a stale expected_version refuses the apply and
+        # leaves the event unprocessed; a fresh precondition then applies.
+        attempt = self._mk_attempt()
+
+        def event(key):
+            return {"environment": "sandbox", "dedupe_key": key}
+
+        out = asyncio.run(self.repo.apply_event(
+            event("k1"), attempt_id=attempt["id"],
+            fields={"status": "pending"}, incoming_ts=None,
+            expected_version=attempt["version"],
+        ))
+        self.assertEqual(out["outcome"], "applied")
+        self.assertEqual(self._attempt()["version"], attempt["version"] + 1)
+
+        out2 = asyncio.run(self.repo.apply_event(
+            event("k2"), attempt_id=attempt["id"],
+            fields={"status": "verified"}, incoming_ts=None,
+            expected_version=attempt["version"],  # stale
+        ))
+        self.assertEqual(out2["outcome"], "conflict")
+        self.assertEqual(self._attempt()["status"], "pending")
+        stored = [e for e in self.repo._events.values()
+                  if e["dedupe_key"] == "k2"][0]
+        self.assertIsNone(stored["processed_at"])
+
+        out3 = asyncio.run(self.repo.apply_event(
+            event("k2"), attempt_id=attempt["id"],
+            fields={"status": "verified"}, incoming_ts=None,
+            expected_version=self._attempt()["version"],
+        ))
+        self.assertEqual(out3["outcome"], "applied")
+        self.assertEqual(self._attempt()["status"], "verified")
+
+
+
+
 class SumsubClientContractTests(unittest.TestCase):
     """Exact provider paths + signing input + lookup/create recovery."""
 
@@ -1521,6 +1773,55 @@ class DurableRepositoryContractTests(unittest.TestCase):
             "sandbox", AI, attempt["transfer_party_id"]
         ))
         self.assertEqual(latest["status"], "verified")
+
+
+    def test_expected_version_conflict_leaves_event_retryable(self):
+        # Durable-path contract assertion: the version precondition is
+        # checked inside the row lock — a stale snapshot cannot apply and
+        # the event is left unprocessed for redelivery.
+        import asyncio
+        repo = self._repo()
+        attempt = asyncio.run(repo.create_attempt(self._attempt_row()))
+        self.assertEqual(attempt["version"], 0)
+
+        out = asyncio.run(repo.apply_event(
+            self._event_row(attempt["id"]),
+            attempt_id=attempt["id"],
+            fields={"status": "pending",
+                    "last_event_created_at_ms": "2026-10-08 10:00:00.000"},
+            incoming_ts=datetime(2026, 10, 8, 10, 0,
+                                 tzinfo=timezone.utc).timestamp(),
+            expected_version=0,
+        ))
+        self.assertEqual(out["outcome"], "applied")
+        latest = asyncio.run(repo.get_latest_attempt(
+            "sandbox", AI, attempt["transfer_party_id"]))
+        self.assertEqual(latest["version"], 1)
+
+        stale = self._event_row(attempt["id"])
+        stale["dedupe_key"] = "stale-versioned-event"
+        out2 = asyncio.run(repo.apply_event(
+            stale, attempt_id=attempt["id"],
+            fields={"status": "verified"}, incoming_ts=None,
+            expected_version=0,  # stale — attempt is now at version 1
+        ))
+        self.assertEqual(out2["outcome"], "conflict")
+        latest = asyncio.run(repo.get_latest_attempt(
+            "sandbox", AI, attempt["transfer_party_id"]))
+        self.assertEqual(latest["status"], "pending")
+        events = asyncio.run(repo.list_events_for_attempt(attempt["id"]))
+        unprocessed = [e for e in events if e["processed_at"] is None]
+        self.assertEqual(len(unprocessed), 1)
+        self.assertEqual(unprocessed[0]["dedupe_key"], "stale-versioned-event")
+
+        out3 = asyncio.run(repo.apply_event(
+            stale, attempt_id=attempt["id"],
+            fields={"status": "verified"}, incoming_ts=None,
+            expected_version=latest["version"],
+        ))
+        self.assertEqual(out3["outcome"], "applied")
+        self.assertEqual(latest["version"] + 1, 2)
+
 
 
 if __name__ == "__main__":

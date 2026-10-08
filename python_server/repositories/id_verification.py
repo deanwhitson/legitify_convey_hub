@@ -46,7 +46,7 @@ class AttemptRepository(Protocol):
     async def list_attempts_by_applicant_id(self, environment: str, applicant_id: str) -> List[dict]: ...
     async def create_attempt(self, attempt: dict) -> dict: ...
     async def update_attempt_fields(self, attempt_id: str, fields: dict) -> dict: ...
-    async def apply_event(self, event: dict, *, attempt_id: Optional[str], fields: Optional[dict], incoming_ts: Optional[float], mark_processed: bool = True, confirmed: bool = False) -> dict:
+    async def apply_event(self, event: dict, *, attempt_id: Optional[str], fields: Optional[dict], incoming_ts: Optional[float], mark_processed: bool = True, confirmed: bool = False, expected_version: Optional[int] = None) -> dict:
         """Atomic event receipt + state application. See implementations."""
         ...
     async def list_events_for_attempt(self, attempt_id: str) -> List[dict]: ...
@@ -75,7 +75,7 @@ _ATTEMPT_COLUMNS = (
     "inspection_id", "status",
     "review_answer", "review_reject_type", "reject_labels",
     "last_correlation_id", "last_event_created_at_ms", "last_event_type",
-    "simulated", "created_at", "updated_at",
+    "version", "simulated", "created_at", "updated_at",
 )
 
 _EVENT_COLUMNS = (
@@ -182,7 +182,8 @@ class PostgresIdVerificationRepository:
     async def update_attempt_fields(self, attempt_id, fields: dict, *, connection=None) -> dict:
         sets = ", ".join(f"{k} = ${i+2}" for i, k in enumerate(fields.keys()))
         sql = (
-            f"UPDATE id_verification_attempts SET {sets}, updated_at = now() "
+            f"UPDATE id_verification_attempts SET {sets}, "
+            f"version = version + 1, updated_at = now() "
             f"WHERE id = $1 RETURNING {', '.join(_ATTEMPT_COLUMNS)}"
         )
         try:
@@ -202,6 +203,7 @@ class PostgresIdVerificationRepository:
         incoming_ts: Optional[float],
         mark_processed: bool = True,
         confirmed: bool = False,
+        expected_version: Optional[int] = None,
     ) -> dict:
         """Atomically (a) dedupe-insert the event, (b) apply the attempt
         update under the attempt row lock with the staleness guard re-checked
@@ -216,9 +218,14 @@ class PostgresIdVerificationRepository:
         than the last applied event is ``stale``; an equal provider
         timestamp is ``ambiguous`` and never applies — only an explicitly
         ``confirmed`` (provider-reconciled) apply may proceed on equality.
-        The lock is never held across a provider call; reconciliation
-        happens beforehand and only its verdict enters the transaction.
-        Returns {"outcome": "applied"|"stale"|"ambiguous"|"recorded"|"duplicate"}.
+        When ``expected_version`` is supplied (a provider-reconciled apply),
+        the attempt's state version is compared under the same lock: if the
+        state moved while the provider lookup was in flight the apply is
+        refused with ``conflict`` and the event is left unprocessed, so
+        redelivery resumes it against fresh state. The lock is never held
+        across a provider call; reconciliation happens beforehand and only
+        its verdict plus the pre-lookup version enters the transaction.
+        Returns {"outcome": "applied"|"stale"|"ambiguous"|"conflict"|"recorded"|"duplicate"}.
         """
         async def work(conn) -> dict:
             cols = list(event.keys())
@@ -249,14 +256,24 @@ class PostgresIdVerificationRepository:
             outcome = "recorded"
             if attempt_id and fields:
                 lock = await db.query(
-                    "SELECT last_event_created_at_ms FROM id_verification_attempts "
-                    "WHERE id=$1 FOR UPDATE",
+                    "SELECT last_event_created_at_ms, version "
+                    "FROM id_verification_attempts WHERE id=$1 FOR UPDATE",
                     [attempt_id], connection=conn,
                 )
+                row_version = lock.rows[0]["version"] if lock.rows else None
                 last_ts = (
                     _ms_ts(lock.rows[0]["last_event_created_at_ms"]) if lock.rows else None
                 )
-                if incoming_ts is not None and last_ts is not None and incoming_ts < last_ts:
+                if expected_version is not None and row_version != expected_version:
+                    # The attempt moved while the provider reconciliation was
+                    # in flight — the snapshot is stale. Leave the event
+                    # unprocessed so redelivery resumes it.
+                    await db.query(
+                        "UPDATE id_verification_events SET disposition='version_conflict' WHERE id=$1",
+                        [event_id], connection=conn,
+                    )
+                    outcome = "conflict"
+                elif incoming_ts is not None and last_ts is not None and incoming_ts < last_ts:
                     await db.query(
                         "UPDATE id_verification_events SET disposition='out_of_order' WHERE id=$1",
                         [event_id], connection=conn,
@@ -272,13 +289,13 @@ class PostgresIdVerificationRepository:
                 else:
                     sets = ", ".join(f"{k} = ${i+2}" for i, k in enumerate(fields.keys()))
                     upd = (
-                        f"UPDATE id_verification_attempts SET {sets}, updated_at = now() "
-                        f"WHERE id = $1"
+                        f"UPDATE id_verification_attempts SET {sets}, "
+                        f"version = version + 1, updated_at = now() WHERE id = $1"
                     )
                     await db.query(upd, [attempt_id, *fields.values()], connection=conn)
                     outcome = "applied"
 
-            if mark_processed:
+            if mark_processed and outcome != "conflict":
                 await db.query(
                     "UPDATE id_verification_events SET processed_at = now() WHERE id=$1",
                     [event_id], connection=conn,
@@ -371,6 +388,7 @@ class InMemoryIdVerificationRepository:
                     raise AttemptConflictError("open attempt already exists")
             row = dict(attempt)
             row.setdefault("id", self._new_id())
+            row.setdefault("version", 0)
             now = datetime.now(timezone.utc).isoformat()
             row.setdefault("created_at", now)
             row.setdefault("updated_at", now)
@@ -382,6 +400,7 @@ class InMemoryIdVerificationRepository:
             if attempt_id not in self._attempts:
                 raise StorageUnavailableError("attempt row vanished")
             self._attempts[attempt_id].update(fields)
+            self._attempts[attempt_id]["version"] = self._attempts[attempt_id].get("version", 0) + 1
             self._attempts[attempt_id]["updated_at"] = datetime.now(timezone.utc).isoformat()
             return dict(self._attempts[attempt_id])
 
@@ -394,6 +413,7 @@ class InMemoryIdVerificationRepository:
         incoming_ts: Optional[float],
         mark_processed: bool = True,
         confirmed: bool = False,
+        expected_version: Optional[int] = None,
     ) -> dict:
         """In-memory mirror of the durable apply_event: one critical section
         (the lock serialises application), unprocessed stored events resume,
@@ -425,7 +445,11 @@ class InMemoryIdVerificationRepository:
                         raise StorageUnavailableError("attempt row vanished")
                     attempt = self._attempts[attempt_id]
                     last_ts = _ms_ts(attempt.get("last_event_created_at_ms"))
-                    if incoming_ts is not None and last_ts is not None and incoming_ts < last_ts:
+                    if (expected_version is not None
+                            and attempt.get("version", 0) != expected_version):
+                        row["disposition"] = "version_conflict"
+                        outcome = "conflict"
+                    elif incoming_ts is not None and last_ts is not None and incoming_ts < last_ts:
                         row["disposition"] = "out_of_order"
                         outcome = "stale"
                     elif (incoming_ts is not None and last_ts is not None
@@ -435,7 +459,7 @@ class InMemoryIdVerificationRepository:
                     else:
                         self._apply_fields(attempt, fields)
                         outcome = "applied"
-                if mark_processed:
+                if mark_processed and outcome != "conflict":
                     row["processed_at"] = datetime.now(timezone.utc).isoformat()
                 return {"outcome": outcome}
             except Exception:
@@ -447,6 +471,7 @@ class InMemoryIdVerificationRepository:
         """Test seam: the attempt-field write inside apply_event — a test
         subclass can inject a failure here to prove rollback semantics."""
         attempt.update(fields)
+        attempt["version"] = attempt.get("version", 0) + 1
         attempt["updated_at"] = datetime.now(timezone.utc).isoformat()
 
     async def list_events_for_attempt(self, attempt_id, *, connection=None) -> List[dict]:

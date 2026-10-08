@@ -679,9 +679,12 @@ async def apply_webhook_event(
     fields = {
         "status": requested,
         "last_event_type": event_type,
-        "last_event_created_at_ms": event.get("createdAtMs"),
         "last_correlation_id": event.get("correlationId"),
     }
+    # Only a provider-supplied timestamp may advance the ordering watermark —
+    # a missing-timestamp event must not erase the last trustworthy one.
+    if event.get("createdAtMs") is not None:
+        fields["last_event_created_at_ms"] = event.get("createdAtMs")
     summary = sanitised_review_summary(event)
     if summary.get("reviewAnswer") is not None:
         fields["review_answer"] = summary["reviewAnswer"]
@@ -693,7 +696,14 @@ async def apply_webhook_event(
         fields["inspection_id"] = _event_inspection_id(event)
 
     confirmed = False
+    expected_version = None
     if needs_reconcile:
+        # Capture the attempt's state version BEFORE the provider call — no
+        # row lock is held during the network request; the apply revalidates
+        # this version under the lock, so a newer commit that landed while
+        # reconciliation was in flight cannot be overwritten by the stale
+        # snapshot.
+        expected_version = attempt.get("version", 0)
         try:
             reconciled = await _reconcile_attempt_status(ctx, attempt, event)
         except SumsubClientError as exc:
@@ -724,6 +734,7 @@ async def apply_webhook_event(
         fields=fields,
         incoming_ts=incoming_ts,
         confirmed=confirmed,
+        expected_version=expected_version,
     )
     if out["outcome"] == "duplicate":
         return {"result": "duplicate", "disposition": "duplicate"}
@@ -733,4 +744,10 @@ async def apply_webhook_event(
         # A concurrent write reordered under the row lock — recorded, not
         # applied; redelivery reconciles again against fresh state.
         return {"result": "ambiguous_not_applied", "disposition": "ambiguous_not_applied"}
+    if out["outcome"] == "conflict":
+        # The attempt version moved while the provider lookup was in flight —
+        # the reconciled snapshot is stale. The event was left unprocessed,
+        # so refusing the ack is safe: redelivery resumes it and reconciles
+        # against the now-current state.
+        raise ReconcilePendingError()
     return {"result": "applied", "disposition": disposition, "status": fields["status"]}
