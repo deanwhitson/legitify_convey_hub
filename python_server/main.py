@@ -14,6 +14,8 @@ from middleware.upload_size_limit import UploadBodyLimitMiddleware
 from routers import address, clauses, document_catalogue, documents, generated_documents, health, milestones, template_data_fields, transfers, users
 from routers.v1 import documents as v1_documents
 from routers.v1 import golden_records as v1_golden_records
+from routers.v1 import id_verification as v1_id_verification
+from routers.v1 import id_verification_webhooks as v1_id_verification_webhooks
 from routers.v1 import properties as v1_properties
 from routers.v1 import transfers as v1_transfers
 
@@ -79,6 +81,8 @@ async def protect_response_boundary(request: Request, call_next):
 app.include_router(health.router, prefix="/api/health")
 app.include_router(transfers.router, prefix="/api/transfers")
 app.include_router(v1_transfers.router, prefix="/api/v1/transfers")
+app.include_router(v1_id_verification.router, prefix="/api/v1/transfers")
+app.include_router(v1_id_verification_webhooks.router, prefix="/api/v1")
 app.include_router(v1_golden_records.router, prefix="/api/v1/golden-records")
 app.include_router(v1_documents.router, prefix="/api/v1/documents")
 app.include_router(v1_properties.router, prefix="/api/v1/properties")

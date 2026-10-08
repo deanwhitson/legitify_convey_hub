@@ -78,6 +78,21 @@ def _production_config_errors(env=os.environ) -> List[str]:
             "(unauthenticated legacy-tenant bridge)"
         )
 
+    # Sumsub provider modes demand complete credentials in production;
+    # 'off'/'fixture' carry none. Live mode is never authorised silently —
+    # it requires the same explicit review as any production change.
+    if env.get("SUMSUB_MODE", "off") in ("sandbox", "live"):
+        for name in ("SUMSUB_APP_TOKEN", "SUMSUB_APP_SECRET",
+                     "SUMSUB_WEBHOOK_SECRET", "SUMSUB_LEVEL_NAME"):
+            if _is_placeholder(env.get(name)):
+                errors.append(f"{name} missing or still a placeholder value")
+        base = env.get("SUMSUB_BASE_URL", "https://api.sumsub.com")
+        try:
+            if urllib.parse.urlparse(base).scheme != "https":
+                errors.append("SUMSUB_BASE_URL must be an https URL")
+        except ValueError:
+            errors.append("SUMSUB_BASE_URL is not a valid URL")
+
     return errors
 
 
@@ -113,6 +128,14 @@ class Settings:
     # TEMPORARY: server-controlled tenant for the unauthenticated legacy POST /api/transfers.
     # This bridge is deleted once the legacy write path is retired or JWT auth is added.
     legacy_accountable_institution_id: Optional[int] = None
+    # Sumsub identity-verification POC — secrets never appear in repr().
+    sumsub_mode: str = "off"
+    sumsub_base_url: str = "https://api.sumsub.com"
+    sumsub_app_token: Optional[str] = field(default=None, repr=False)
+    sumsub_app_secret: Optional[str] = field(default=None, repr=False)
+    sumsub_webhook_secret: Optional[str] = field(default=None, repr=False)
+    sumsub_level_name: Optional[str] = None
+    sumsub_sdk_token_ttl_seconds: int = 1200
 
 
 def _resolve_database_url() -> Optional[str]:
@@ -183,4 +206,11 @@ def load_settings() -> Settings:
         redis_url=os.getenv("REDIS_URL", "redis://localhost:6379/0"),
         audit_database_url=os.getenv("AUDIT_DATABASE_URL"),
         legacy_accountable_institution_id=legacy_ai,
+        sumsub_mode=os.getenv("SUMSUB_MODE", "off"),
+        sumsub_base_url=os.getenv("SUMSUB_BASE_URL", "https://api.sumsub.com"),
+        sumsub_app_token=os.getenv("SUMSUB_APP_TOKEN"),
+        sumsub_app_secret=os.getenv("SUMSUB_APP_SECRET"),
+        sumsub_webhook_secret=os.getenv("SUMSUB_WEBHOOK_SECRET"),
+        sumsub_level_name=os.getenv("SUMSUB_LEVEL_NAME"),
+        sumsub_sdk_token_ttl_seconds=int(os.getenv("SUMSUB_SDK_TOKEN_TTL_SECONDS", "1200")),
     )

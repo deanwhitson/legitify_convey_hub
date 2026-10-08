@@ -3,7 +3,7 @@
   "algorithm": "sha256-over-raw-file-bytes",
   "canonicalEol": "lf",
   "note": "sha256 is over the file bytes exactly as the runner applies them. A CRLF checkout produces different digests — that is a byte-different artifact, not a cosmetic difference.",
-  "fileCount": 27,
+  "fileCount": 28,
   "files": [
     {
       "file": "001_initial_schema.sql",
@@ -166,6 +166,12 @@
       "sha256": "d5ddcf01c40900fa92b512beef854f103662f921a5d596b1e340a54fd36f4d08",
       "eol": "lf",
       "bytes": 936
+    },
+    {
+      "file": "030_deedly_id_verification.sql",
+      "sha256": "0276af8160ba3c93391a1d5631fc763acd565801b516991843ece38d9f524535",
+      "eol": "lf",
+      "bytes": 4098
     }
   ]
 }

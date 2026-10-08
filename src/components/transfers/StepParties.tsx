@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { readNavigationState } from '@/lib/navigationState'
 import { Users, Plus, Trash2, User, Star, Phone, Mail, AlertTriangle, ShieldCheck } from 'lucide-react'
@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui'
 import { Input } from '@/components/ui'
 import { Button } from '@/components/ui'
 import { useTransfer, Party } from './TransferForm'
+import { IdVerificationPanel } from './IdVerificationPanel'
 import { findPotentialDuplicates } from '@/lib/utils/partyDuplicates'
 import type { GoldenRecord, GoldenRecordEntityType } from '@/lib/api/goldenRecordsApi'
 
@@ -23,6 +24,10 @@ interface PartyCardProps {
   isPrimary?: boolean
   sameTypeCount: number
   duplicates: { identifierMatches: Party[]; nameMatches: Party[] }
+  /** Persisted transfer id — verification is only available on a saved matter. */
+  transferId?: string
+  /** All parties, for selecting a natural-person representative. */
+  allParties: Party[]
   onUpdate: (id: string, field: keyof Party, value: string | boolean) => void
   onRemove: (id: string) => void
   onSetPrimary: (type: 'buyer' | 'seller', partyId: string) => void
@@ -33,6 +38,8 @@ const PartyCard: React.FC<PartyCardProps> = ({
   isPrimary,
   sameTypeCount,
   duplicates,
+  transferId,
+  allParties,
   onUpdate,
   onRemove,
   onSetPrimary
@@ -40,6 +47,17 @@ const PartyCard: React.FC<PartyCardProps> = ({
   const duplicateNames = [...duplicates.identifierMatches, ...duplicates.nameMatches]
     .map(p => p.name || 'another party')
   const needsAcknowledgement = duplicateNames.length > 0 && !party.acknowledgedDuplicate
+  const isPersonParty = !party.entityType || party.entityType === 'person'
+  // Staff-opened verification panel state. A company/trust party verifies via
+  // a chosen natural-person representative — never the entity itself.
+  const [verifyOpen, setVerifyOpen] = useState(false)
+  const [representativePartyId, setRepresentativePartyId] = useState('')
+  const personSubjects = allParties.filter(
+    p => (!p.entityType || p.entityType === 'person') && p.persistedPartyId && p.id !== party.id
+  )
+  const representativeSubject = isPersonParty
+    ? undefined
+    : personSubjects.find(p => p.persistedPartyId === representativePartyId)
 
   return (
   <Card variant="premium" className="animate-in fade-in slide-in-from-bottom-3 duration-300 hover:shadow-premium transition-all duration-300">
@@ -284,6 +302,79 @@ const PartyCard: React.FC<PartyCardProps> = ({
           )}
         </div>
       )}
+
+      {/* Identity verification (Sumsub POC) — saved parties only. */}
+      <div className="pt-2 border-t border-gray-200 dark:border-navy-700">
+        {!party.persistedPartyId || !transferId ? (
+          <p className="text-xs text-gray-400 dark:text-gray-500">
+            Save the matter to enable identity verification for this party.
+          </p>
+        ) : !verifyOpen ? (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setVerifyOpen(true)}
+            title={
+              isPersonParty
+                ? 'Verify this person’s identity'
+                : 'Verify a natural-person representative for this entity'
+            }
+          >
+            <ShieldCheck className="h-4 w-4 mr-1" />
+            {isPersonParty ? 'Verify identity' : 'Verify representative'}
+          </Button>
+        ) : isPersonParty ? (
+          <IdVerificationPanel
+            key={party.persistedPartyId}
+            transferId={transferId}
+            subjectPartyId={party.persistedPartyId}
+            subjectName={party.name || 'Unnamed party'}
+            onClose={() => setVerifyOpen(false)}
+          />
+        ) : personSubjects.length === 0 ? (
+          <p className="text-xs text-amber-700 dark:text-amber-300">
+            A company or trust is never verified as a passport holder. Save a
+            natural-person party first to select an authorised representative.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            <label
+              htmlFor={`representative-${party.id}`}
+              className="block text-xs font-medium text-gray-700 dark:text-gray-300"
+            >
+              Select the natural-person representative to verify
+            </label>
+            <select
+              id={`representative-${party.id}`}
+              className="w-full text-sm rounded-md border border-gray-300 dark:border-navy-600 bg-white dark:bg-navy-800 text-gray-700 dark:text-gray-200 px-2 py-1"
+              value={representativePartyId}
+              onChange={e => setRepresentativePartyId(e.target.value)}
+            >
+              <option value="">Choose a person…</option>
+              {personSubjects.map(p => (
+                <option key={p.persistedPartyId} value={p.persistedPartyId}>
+                  {p.name || 'Unnamed party'}
+                </option>
+              ))}
+            </select>
+            {representativeSubject ? (
+              <IdVerificationPanel
+                key={`${party.persistedPartyId}:${representativeSubject.persistedPartyId}`}
+                transferId={transferId}
+                subjectPartyId={representativeSubject.persistedPartyId!}
+                subjectName={representativeSubject.name || 'Unnamed party'}
+                onBehalfOfPartyId={party.persistedPartyId}
+                onBehalfOfName={party.name || party.company || 'this entity'}
+                onClose={() => setVerifyOpen(false)}
+              />
+            ) : (
+              <Button variant="secondary" size="sm" onClick={() => setVerifyOpen(false)}>
+                Cancel
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
     </CardContent>
   </Card>
   )
@@ -313,6 +404,8 @@ export function goldenRecordToParty(record: GoldenRecord, id: string): Party {
 const StepParties: React.FC = () => {
   const { state, dispatch } = useTransfer()
   const { parties } = state
+  // The UUID matter id — the human transfer_id code is not a valid path param.
+  const transferId = state.id
   const location = useLocation()
   const goldenRecord = readNavigationState(location.state)?.goldenRecord as GoldenRecord | undefined
   const goldenRecordSearch = readNavigationState(location.state)?.goldenRecordSearch as { entityType: GoldenRecordEntityType; query: string } | undefined
@@ -459,6 +552,8 @@ const StepParties: React.FC = () => {
                   isPrimary={party.isPrimary}
                   sameTypeCount={getPartiesByType('buyer').length}
                   duplicates={findPotentialDuplicates(party, parties)}
+                  transferId={transferId}
+                  allParties={parties}
                   onUpdate={updateParty}
                   onRemove={removeParty}
                   onSetPrimary={setPrimaryParty}
@@ -521,6 +616,8 @@ const StepParties: React.FC = () => {
                   isPrimary={party.isPrimary}
                   sameTypeCount={getPartiesByType('seller').length}
                   duplicates={findPotentialDuplicates(party, parties)}
+                  transferId={transferId}
+                  allParties={parties}
                   onUpdate={updateParty}
                   onRemove={removeParty}
                   onSetPrimary={setPrimaryParty}

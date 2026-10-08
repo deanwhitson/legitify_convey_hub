@@ -1359,4 +1359,52 @@ router.post(
   })
 )
 
+// ---- ID verification (Sumsub POC) — auth-forwarded to the FastAPI owner ----
+// The BFF verifies the JWT then forwards it unchanged; FastAPI independently
+// re-verifies, re-checks transfer/party tenancy, and owns provider calls.
+// No provider ids, level names or tenant ids are accepted here — FastAPI
+// derives identity from server-side rows only.
+
+router.get(
+  '/:id/parties/:transfer_party_id/id-verification',
+  requireJwt,
+  asyncHandler(async (req: Request, res: Response) => {
+    const user = req.currentUser!
+    const { id, transfer_party_id } = req.params
+    if (user.isClient) {
+      res.status(404).json({ success: false, error: 'Not found' })
+      return
+    }
+    if (!user.hasAbility('transfers:read')) {
+      res.status(403).json({ success: false, error: 'Forbidden' })
+      return
+    }
+    if (!isUuid(id) || !isUuid(transfer_party_id)) {
+      res.status(404).json({ success: false, error: 'Not found' })
+      return
+    }
+    await proxyDeedly(req, res, `/${id}/parties/${transfer_party_id}/id-verification`, 'GET')
+  })
+)
+
+for (const action of ['session', 'refresh', 'retry'] as const) {
+  router.post(
+    `/:id/parties/:transfer_party_id/id-verification/${action}`,
+    requireJwt,
+    asyncHandler(async (req: Request, res: Response) => {
+      const user = req.currentUser!
+      const { id, transfer_party_id } = req.params
+      if (user.isClient || !user.hasAbility('transfers:write')) {
+        res.status(403).json({ success: false, error: 'Forbidden' })
+        return
+      }
+      if (!isUuid(id) || !isUuid(transfer_party_id)) {
+        res.status(404).json({ success: false, error: 'Not found' })
+        return
+      }
+      await proxyDeedly(req, res, `/${id}/parties/${transfer_party_id}/id-verification/${action}`, 'POST')
+    })
+  )
+}
+
 export default router
