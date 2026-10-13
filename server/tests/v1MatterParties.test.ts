@@ -330,6 +330,58 @@ describe('v1 matter create + party attach BFF proxies', async () => {
     assert.equal(res.status, 403)
   })
 
+  it('forwards Veriff session, refresh and retry through the protected IDV proxy with the caller JWT', async () => {
+    const subject = randomUUID()
+    const token = makeToken()
+    upstreamResponse = { status: 200, body: { message: 'OK', data: { provider: 'veriff', captureUrl: 'https://alchemy.veriff.com/v/synthetic' } } }
+    for (const action of ['session', 'refresh', 'retry']) {
+      const route = `/api/v1/transfers/${TRANSFER_ID}/parties/${subject}/id-verification/${action}`
+      const res = await httpPost(route, { Authorization: `Bearer ${token}` }, {})
+      assert.equal(res.status, 200)
+      assert.equal(res.body.data.provider, 'veriff')
+      assert.equal(captured.at(-1)?.url, route)
+      assert.equal(captured.at(-1)?.headers.authorization, `Bearer ${token}`)
+      assert.equal(captured.at(-1)?.body, '{}')
+    }
+  })
+
+  it('guards Veriff IDV mutations before any upstream call', async () => {
+    const route = `/api/v1/transfers/${TRANSFER_ID}/parties/${randomUUID()}/id-verification/session`
+    for (const [headers, expected] of [
+      [{}, 401],
+      [{ Authorization: `Bearer ${makeToken(['transfers:read'])}` }, 403],
+      [{ Authorization: `Bearer ${makeToken(['transfers:write'], 4)}` }, 403],
+    ] as const) {
+      const res = await httpPost(route, headers, {})
+      assert.equal(res.status, expected)
+    }
+    assert.equal(captured.length, 0)
+  })
+
+  it('retrieves Veriff status via GET and preserves no-store and technical failures', async () => {
+    const route = `/api/v1/transfers/${TRANSFER_ID}/parties/${randomUUID()}/id-verification`
+    const token = makeToken()
+    upstreamResponse = { status: 200, body: { message: 'OK', data: { status: 'declined', environment: 'test', simulated: true } } }
+    const res = await fetch(baseUrl + route, { headers: { Authorization: `Bearer ${token}` } })
+    assert.equal(res.status, 200)
+    assert.equal(res.headers.get('cache-control'), 'no-store')
+    assert.equal((await res.json()).data.status, 'declined')
+    assert.equal(captured[0].method, 'GET')
+    assert.equal(captured[0].headers.authorization, `Bearer ${token}`)
+    upstreamResponse = { status: 503, body: { success: false, error: 'provider_unavailable' } }
+    const failed = await fetch(baseUrl + route, { headers: { Authorization: `Bearer ${token}` } })
+    assert.equal(failed.status, 503)
+    assert.equal((await failed.json()).error, 'provider_unavailable')
+    for (const code of ['configuration_unavailable', 'storage_unavailable']) {
+      upstreamResponse = { status: 503, body: { success: false, error: code, sensitiveDetail: 'must not reach browser' } }
+      const r = await fetch(baseUrl + route, { headers: { Authorization: `Bearer ${token}` } })
+      assert.deepEqual(await r.json(), { success: false, error: code })
+    }
+    upstreamResponse = { status: 503, body: { error: 'sensitive unrecognised provider detail' } }
+    const sanitised = await fetch(baseUrl + route, { headers: { Authorization: `Bearer ${token}` } })
+    assert.equal((await sanitised.json()).error, 'Matter service temporarily unavailable')
+  })
+
   it('denies client-role matter creation even with transfers:write, without calling upstream', async () => {
     const token = makeToken(['api', 'transfers:read', 'transfers:write'], 4, 5)
     const res = await httpPost(

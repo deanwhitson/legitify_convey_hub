@@ -129,6 +129,12 @@ class Settings:
     # This bridge is deleted once the legacy write path is retired or JWT auth is added.
     legacy_accountable_institution_id: Optional[int] = None
     # Sumsub identity-verification POC — secrets never appear in repr().
+    idv_provider: str = "sumsub"
+    veriff_mode: str = "disabled"
+    veriff_base_url: str = ""
+    veriff_api_key: Optional[str] = field(default=None, repr=False)
+    veriff_shared_secret: Optional[str] = field(default=None, repr=False)
+    veriff_url_encryption_key: Optional[str] = field(default=None, repr=False)
     sumsub_mode: str = "off"
     sumsub_base_url: str = "https://api.sumsub.com"
     sumsub_app_token: Optional[str] = field(default=None, repr=False)
@@ -207,6 +213,12 @@ def load_settings() -> Settings:
         redis_url=os.getenv("REDIS_URL", "redis://localhost:6379/0"),
         audit_database_url=os.getenv("AUDIT_DATABASE_URL"),
         legacy_accountable_institution_id=legacy_ai,
+        idv_provider=os.getenv("IDV_PROVIDER", "sumsub"),
+        veriff_mode=os.getenv("VERIFF_MODE", "disabled"),
+        veriff_base_url=os.getenv("VERIFF_BASE_URL", ""),
+        veriff_api_key=os.getenv("VERIFF_API_KEY"),
+        veriff_shared_secret=os.getenv("VERIFF_SHARED_SECRET"),
+        veriff_url_encryption_key=os.getenv("VERIFF_URL_ENCRYPTION_KEY"),
         sumsub_mode=os.getenv("SUMSUB_MODE", "off"),
         sumsub_base_url=os.getenv("SUMSUB_BASE_URL", "https://api.sumsub.com"),
         sumsub_app_token=os.getenv("SUMSUB_APP_TOKEN"),

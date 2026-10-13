@@ -69,6 +69,9 @@ def _error(exc: IdVerificationError) -> JSONResponse:
         "no_attempt": 404,
         "not_retryable": 409,
         "subject_not_eligible": 422,
+        "creation_unresolved": 409,
+        "subject_context_conflict": 409,
+        "subject_changed": 409,
     }.get(exc.code, 400)
     return JSONResponse(
         status_code=status,
@@ -85,6 +88,14 @@ async def _resolve_context(request: Request):
     ctx = getattr(request.app.state, "id_verification_context", None)
     if ctx is not None:
         return ctx
+    provider = getattr(request.app.state.settings, "idv_provider", "sumsub")
+    if provider == "veriff":
+        from services.veriff_verification import build_veriff_context
+        ctx = build_veriff_context(request.app.state.settings)
+        request.app.state.id_verification_context = ctx
+        return ctx
+    if provider != "sumsub":
+        raise ConfigurationUnavailableError()
     config = load_id_verification_config(request.app.state.settings)
     if config.mode == MODE_DISABLED:
         raise ConfigurationUnavailableError()
@@ -185,11 +196,14 @@ async def get_id_verification_status(
         )
     except IdVerificationError as exc:
         return _error(exc)
-    data = await get_status(
-        ctx,
-        ai=user.accountable_institution_id,
-        transfer_party_id=transfer_party_id,
-    )
+    try:
+        data = await get_status(
+            ctx,
+            ai=user.accountable_institution_id,
+            transfer_party_id=transfer_party_id,
+        )
+    except IdVerificationError as exc:
+        return _error(exc)
     # The stored attempt binding is authoritative for the subject context;
     # fall back to the request-derived kind only when no attempt exists.
     data["subjectKind"] = data.get("subjectKind") or subject_kind
@@ -274,6 +288,8 @@ async def retry_id_verification(
         if unexpected:
             raise HTTPException(status_code=422, detail="Unexpected field(s)")
         on_behalf_of = body.get("onBehalfOfPartyId")
+        if on_behalf_of is not None and not isinstance(on_behalf_of, str):
+            raise HTTPException(status_code=422, detail="onBehalfOfPartyId must be a UUID string")
     try:
         ctx = await _resolve_context(request)
         subject_kind, _target = await _authorize_subject(

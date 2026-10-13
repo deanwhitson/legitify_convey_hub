@@ -49,6 +49,8 @@ _ALG_HEADER = "x-payload-digest-alg"
 
 
 async def _ctx(request: Request):
+    if getattr(request.app.state.settings, "idv_provider", "sumsub") != "sumsub":
+        raise HTTPException(status_code=404, detail="Not found")
     ctx = getattr(request.app.state, "id_verification_context", None)
     if ctx is not None:
         return ctx

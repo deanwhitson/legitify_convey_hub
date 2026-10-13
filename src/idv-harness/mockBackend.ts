@@ -41,8 +41,19 @@ function saveStore(store: HarnessStore) {
   sessionStorage.setItem(STORE_KEY, JSON.stringify(store))
 }
 
-let mode: 'sandbox' | 'fixture' = 'sandbox'
+let mode: 'sandbox' | 'fixture' | 'veriff-test' =
+  new URLSearchParams(window.location.search).get('provider') === 'veriff' ? 'veriff-test' : 'sandbox'
 export const calls: { method: string; url: string }[] = []
+
+export function simulateVeriffUiOutcome(partyId: string, status: 'pending' | 'verified' | 'declined' | 'review_required') {
+  const store = loadStore()
+  const attempt = store.attempts[partyId]
+  if (!attempt) return
+  attempt.status = status
+  attempt.lastEventType = 'synthetic_veriff_ui_outcome'
+  attempt.updatedAt = new Date().toISOString()
+  saveStore(store)
+}
 
 function envelope(data: unknown, status = 200): Response {
   return new Response(JSON.stringify({ message: 'OK', data }), {
@@ -69,7 +80,7 @@ function statusData(store: HarnessStore, partyId: string) {
     attempt: a
       ? {
           attemptNo: a.attemptNo,
-          provider: 'sumsub',
+          provider: mode === 'veriff-test' ? 'veriff' : 'sumsub',
           levelName: 'idv-poc-level',
           reviewAnswer: a.reviewAnswer,
           reviewRejectType: a.reviewRejectType,
@@ -80,7 +91,7 @@ function statusData(store: HarnessStore, partyId: string) {
         }
       : null,
     environment: mode,
-    simulated: mode === 'fixture',
+    simulated: mode === 'fixture' || mode === 'veriff-test',
     checks: a ? [{ check: 'provider_review', state: 'not_reported' }] : [],
     subjectKind: a?.subjectKind ?? 'party',
     onBehalfOfPartyId: a?.onBehalfOfPartyId ?? null,
@@ -89,9 +100,11 @@ function statusData(store: HarnessStore, partyId: string) {
 
 function sessionData(a: MockAttempt, resumed: boolean) {
   return {
+    provider: mode === 'veriff-test' ? 'veriff' : 'sumsub',
+    captureUrl: mode === 'veriff-test' ? 'https://alchemy.veriff.com/v/synthetic-harness-do-not-submit' : undefined,
     mode,
     environment: mode,
-    simulated: mode === 'fixture',
+    simulated: mode === 'fixture' || mode === 'veriff-test',
     resumed,
     attemptNo: a.attemptNo,
     status: a.status,
@@ -165,7 +178,7 @@ export function installMockIdvBackend(): void {
   // Driver hooks for the Playwright checks — labelled synthetic controls.
   const w = window as unknown as Record<string, unknown>
   w.__idv = {
-    setMode(next: 'sandbox' | 'fixture') {
+    setMode(next: 'sandbox' | 'fixture' | 'veriff-test') {
       mode = next
     },
     getMode() {

@@ -6,3 +6,4 @@ httpx
 PyJWT==2.9.0
 python-dateutil
 python-multipart
+cryptography>=44,<47

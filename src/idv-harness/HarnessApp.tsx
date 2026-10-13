@@ -1,6 +1,7 @@
 import React from 'react'
 import { IdVerificationEntry } from '@/components/transfers/IdVerificationEntry'
 import type { Party } from '@/components/transfers/TransferForm'
+import { simulateVeriffUiOutcome } from './mockBackend'
 
 const TRANSFER_ID = '11111111-1111-1111-1111-111111111111'
 const PARTY_A = '22222222-2222-2222-2222-222222222222'
@@ -46,6 +47,19 @@ export const HarnessApp: React.FC = () => (
             {p.entityType} · party {p.persistedPartyId?.slice(0, 8)}…
           </p>
           <IdVerificationEntry party={p} transferId={TRANSFER_ID} allParties={parties} />
+          {new URLSearchParams(window.location.search).get('provider') === 'veriff' && p.entityType === 'person' && (
+            <div className="mt-4 border-t pt-2 text-xs">
+              <p>Demo controls: create a session first, simulate an outcome, then Refresh status.</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {(['pending', 'verified', 'declined', 'review_required'] as const).map(status => (
+                  <button key={status} className="rounded border px-2 py-1"
+                    onClick={() => simulateVeriffUiOutcome(p.persistedPartyId!, status)}>
+                    Simulate {status.replace('_', ' ')}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       ))}
     </div>

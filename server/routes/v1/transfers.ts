@@ -13,7 +13,7 @@ const DEEDLY_UNAVAILABLE = { success: false, error: 'Matter service temporarily 
 // Auth-forwarding proxy for write routes owned by the FastAPI DEEDLY service
 // (it holds the Entities client needed for Golden Record visibility checks).
 // The caller's JWT is verified by requireJwt, then forwarded unchanged.
-async function proxyDeedly(req: Request, res: Response, path: string, method: 'GET' | 'POST' | 'PATCH') {
+async function proxyDeedly(req: Request, res: Response, path: string, method: 'GET' | 'POST' | 'PATCH', idVerification = false) {
   const baseUrl = process.env.DEEDLY_API_BASE_URL
   if (!baseUrl) {
     res.status(503).json(DEEDLY_UNAVAILABLE)
@@ -33,6 +33,15 @@ async function proxyDeedly(req: Request, res: Response, path: string, method: 'G
     })
     const body = await upstream.text()
     if (upstream.status >= 500) {
+      if (idVerification && upstream.status === 503) {
+        try {
+          const code: unknown = JSON.parse(body)?.error
+          if (typeof code === 'string' && ['configuration_unavailable', 'provider_unavailable', 'storage_unavailable'].includes(code)) {
+            res.status(503).json({ success: false, error: code })
+            return
+          }
+        } catch { /* unknown upstream details stay sanitised */ }
+      }
       res.status(503).json(DEEDLY_UNAVAILABLE)
       return
     }
@@ -1383,7 +1392,7 @@ router.get(
       res.status(404).json({ success: false, error: 'Not found' })
       return
     }
-    await proxyDeedly(req, res, `/${id}/parties/${transfer_party_id}/id-verification`, 'GET')
+    await proxyDeedly(req, res, `/${id}/parties/${transfer_party_id}/id-verification`, 'GET', true)
   })
 )
 
@@ -1402,7 +1411,7 @@ for (const action of ['session', 'refresh', 'retry'] as const) {
         res.status(404).json({ success: false, error: 'Not found' })
         return
       }
-      await proxyDeedly(req, res, `/${id}/parties/${transfer_party_id}/id-verification/${action}`, 'POST')
+      await proxyDeedly(req, res, `/${id}/parties/${transfer_party_id}/id-verification/${action}`, 'POST', true)
     })
   )
 }

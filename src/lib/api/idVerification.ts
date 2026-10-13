@@ -37,6 +37,8 @@ export interface IdVerificationStatusData {
 }
 
 export interface IdVerificationSessionData {
+  provider?: string
+  captureUrl?: string
   mode: 'fixture' | 'sandbox' | string
   environment: string
   simulated: boolean

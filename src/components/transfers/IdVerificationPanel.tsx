@@ -8,6 +8,7 @@ import {
 } from '@/lib/api/idVerification'
 import { ApiRequestError } from '@/lib/api/httpClient'
 import SumsubCapture from './SumsubCapture'
+import VeriffCapture from './VeriffCapture'
 
 export interface IdVerificationPanelProps {
   transferId: string
@@ -49,6 +50,7 @@ export const IdVerificationStatusView: React.FC<{
     <div className="space-y-3">
       <div className="flex items-center gap-2">
         <Badge variant="secondary">{label}</Badge>
+        {data.attempt?.provider === 'veriff' && <Badge variant="secondary">Veriff</Badge>}
         {data.simulated && (
           <Badge variant="secondary" className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200">
             Simulated — not a real verification
@@ -60,7 +62,7 @@ export const IdVerificationStatusView: React.FC<{
       </div>
       {data.attempt?.reviewRejectType && (
         <p className="text-sm text-gray-600 dark:text-gray-300">
-          Reject type: {data.attempt.reviewRejectType}
+          {data.attempt.provider === 'veriff' ? 'Provider reason code' : 'Reject type'}: {data.attempt.reviewRejectType}
           {data.attempt.rejectLabels.length > 0 && ` · ${data.attempt.rejectLabels.join(', ')}`}
         </p>
       )}
@@ -119,10 +121,16 @@ const UNAVAILABLE_LABELS: Record<string, string> = {
   not_retryable: 'This verification cannot be retried from its current state.',
   subject_not_eligible:
     'Only a natural-person party can be the verification subject.',
+  creation_unresolved:
+    'The session creation outcome is unresolved. Ask an administrator to reconcile it in Veriff before creating another check.',
+  subject_changed:
+    'This party’s identity details changed after verification started. Review the saved party and verification before continuing.',
+  subject_context_conflict:
+    'This person already has a verification with a different representative context. Review that verification before continuing.',
 }
 
 /**
- * Staff-facing ID verification panel (Sumsub POC).
+ * Staff-facing ID verification panel (configured server-side provider).
  *
  * - Every outcome shown here comes from the server-authorised attempt state;
  *   SDK callbacks and local input only trigger a status refetch, never a
@@ -157,6 +165,10 @@ export const IdVerificationPanel: React.FC<IdVerificationPanelProps> = ({
     try {
       const res = await IdVerificationApi.getStatus(transferId, subjectPartyId)
       if (stale(gen)) return
+      if (onBehalfOfPartyId && res.data.attempt && res.data.onBehalfOfPartyId !== onBehalfOfPartyId) {
+        setView({ kind: 'unavailable', code: 'subject_context_conflict' })
+        return
+      }
       setView({ kind: 'status', data: res.data })
     } catch (err) {
       if (stale(gen)) return
@@ -170,7 +182,7 @@ export const IdVerificationPanel: React.FC<IdVerificationPanelProps> = ({
       }
       setView({ kind: 'error', message: 'Status could not be loaded.' })
     }
-  }, [transferId, subjectPartyId])
+  }, [transferId, subjectPartyId, onBehalfOfPartyId])
 
   useEffect(() => {
     generation.current += 1
@@ -257,10 +269,13 @@ export const IdVerificationPanel: React.FC<IdVerificationPanelProps> = ({
         )}
         <span className="text-xs text-gray-500 dark:text-gray-400">
           Environment: {session.environment} · Attempt {session.attemptNo}
+          {session.provider === 'veriff' && ' · Veriff'}
         </span>
       </div>
       {session.mode === 'fixture' ? (
         <FixtureCaptureNotice />
+      ) : session.provider === 'veriff' ? (
+        <VeriffCapture captureUrl={session.captureUrl} simulated={session.simulated} />
       ) : (
         <SumsubCapture
           accessToken={session.sdkToken}

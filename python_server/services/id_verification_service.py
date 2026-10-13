@@ -176,6 +176,8 @@ def _status_payload(attempt: Optional[dict], environment: str, simulated: bool) 
 
 
 async def get_status(ctx: VerificationContext, *, ai: int, transfer_party_id: str) -> dict:
+    if getattr(ctx, "provider", None) == "veriff":
+        return await ctx.status(ai=ai, transfer_party_id=transfer_party_id)
     attempt = await ctx.repository.get_latest_attempt(
         ctx.config.environment, ai, transfer_party_id
     )
@@ -201,6 +203,9 @@ async def start_or_resume_session(
     from RETRYABLE_STATUSES — the same rule retry_attempt enforces. Start
     cannot bypass it (e.g. start-after-verified is refused).
     """
+    if getattr(ctx, "provider", None) == "veriff":
+        return await ctx.start(ai=ai, transfer_id=transfer_id, transfer_party_id=transfer_party_id,
+            subject_kind=subject_kind, on_behalf_of_party_id=on_behalf_of_party_id)
     env = ctx.config.environment
     attempt = await ctx.repository.get_open_attempt(env, ai, transfer_party_id)
     if attempt is not None:
@@ -298,6 +303,8 @@ async def refresh_session_token(
     ctx: VerificationContext, *, ai: int, transfer_party_id: str
 ) -> dict:
     """Renew the short-lived SDK token for the currently open attempt."""
+    if getattr(ctx, "provider", None) == "veriff":
+        return await ctx.refresh(ai=ai, transfer_party_id=transfer_party_id)
     attempt = await ctx.repository.get_open_attempt(
         ctx.config.environment, ai, transfer_party_id
     )
@@ -316,6 +323,9 @@ async def retry_attempt(
     on_behalf_of_party_id: Optional[str] = None,
 ) -> dict:
     """Open a new attempt cycle — only from a retryable terminal state."""
+    if getattr(ctx, "provider", None) == "veriff":
+        return await ctx.start(ai=ai, transfer_id=transfer_id, transfer_party_id=transfer_party_id,
+            subject_kind=subject_kind, on_behalf_of_party_id=on_behalf_of_party_id, retry=True)
     latest = await ctx.repository.get_latest_attempt(
         ctx.config.environment, ai, transfer_party_id
     )

@@ -38,6 +38,13 @@ async def lifespan(app: FastAPI):
     try:
         yield
     finally:
+        idv = getattr(app.state, "id_verification_context", None)
+        if idv is not None and getattr(idv, "provider", None) == "veriff":
+            app.state.id_verification_context = None
+            try:
+                await idv.client.aclose()
+            except Exception:
+                pass  # continue releasing the other clients and DB pool
         # Clear the reference before closing so an in-flight request cannot pick
         # up a half-closed client; it gets a 503 from the dependency instead.
         entities_client, app.state.entities_client = app.state.entities_client, None
