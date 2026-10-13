@@ -163,3 +163,15 @@ performed.
 
 This is local mocked integration evidence, not live-provider, deployed
 authentication, database/grant or production certification.
+
+## Veriff TEST connectivity confirmed
+
+After Dean configured the private server credentials on 13 October 2026,
+one actual Veriff TEST session was created successfully through the implemented
+Python REST client. The decision endpoint responded successfully and its
+original response-byte HMAC was verified with the configured shared secret.
+The decision was pending; no passport or biometric data was submitted.
+This confirms API authentication/session creation/signed result retrieval,
+not passport authenticity or a deployed saved-party flow. The standalone
+connectivity binding and encrypted capture URL are retained locally outside
+this repository in workspace `output/veriff-poc/connection-test.json`.
