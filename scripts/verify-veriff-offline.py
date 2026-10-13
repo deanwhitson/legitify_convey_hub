@@ -23,7 +23,7 @@ for k in list(os.environ):
     if "DATABASE_URL" in k or k.startswith(("VERIFF_", "SUMSUB_", "RUN_")):
         os.environ.pop(k)
 suite = unittest.defaultTestLoader.loadTestsFromNames([
-    "tests.test_veriff_verification", "tests.test_id_verification", "tests.test_verification_invitation",
+    "tests.test_veriff_verification", "tests.test_id_verification", "tests.test_verification_invitation", "tests.test_personal_passport_poc",
 ])
 result = unittest.TextTestRunner(verbosity=1).run(suite)
 sys.exit(not result.wasSuccessful())
