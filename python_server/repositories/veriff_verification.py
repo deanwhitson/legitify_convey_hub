@@ -23,6 +23,38 @@ def row_dict(row):
 
 
 class VeriffRepository:
+    async def invitation_storage_ready(self):
+        await self._query('SELECT id FROM veriff_verification_invitations LIMIT 0',[])
+
+    async def invitation_subject(self,ai,transfer_id,party_id):
+        async def work(conn):
+            return await self._party(ai,transfer_id,party_id,conn)
+        return await self._transaction(work)
+
+    async def reserve_invitation(self,row,recipient_hash,invitation_id):
+        async def work(conn):
+            import hashlib
+            party = await self._party(row['accountable_institution_id'],row['transfer_id'],row['transfer_party_id'],conn)
+            email = party.get('manual_email') if party.get('party_source')=='manual' else party.get('cached_email')
+            if not email or hashlib.sha256(str(email).strip().casefold().encode()).hexdigest()!=recipient_hash:
+                raise IdVerificationError('contact_details_changed')
+            await self._representative(row['accountable_institution_id'],row['transfer_id'],row['on_behalf_of_party_id'],conn)
+            r = await self._query('''INSERT INTO veriff_verification_invitations
+                (id,attempt_id,recipient_hash,delivery_state) VALUES ($1,$2,$3,'sending')
+                ON CONFLICT (attempt_id) DO NOTHING RETURNING *''',[invitation_id,row['id'],recipient_hash],conn)
+            if r.rows:
+                return dict(r.rows[0]),True
+            current = await self._query('SELECT * FROM veriff_verification_invitations WHERE attempt_id=$1',[row['id']],conn)
+            if not current.rows:
+                raise VeriffStorageError()
+            return dict(current.rows[0]),False
+        return await self._transaction(work)
+
+    async def finish_invitation(self,invitation_id,state):
+        if state not in ('accepted','uncertain'):
+            raise VeriffStorageError()
+        await self._query("UPDATE veriff_verification_invitations SET delivery_state=$2,updated_at=now() WHERE id=$1 AND delivery_state='sending'",[invitation_id,state])
+
     async def _query(self, sql, params, connection=None):
         try:
             return await db.query(sql, params, connection=connection)
@@ -40,7 +72,7 @@ class VeriffRepository:
     async def _party(self, ai, transfer_id, party_id, conn):
         parent = await self._query("SELECT id FROM transfers WHERE id=$1 AND accountable_institution_id=$2 FOR SHARE", [transfer_id, ai], conn)
         subject = await self._query("""SELECT id, entity_type, party_source, manual_name, manual_id_type,
-            manual_id_number, manual_passport_country, cached_name FROM transfer_parties
+            manual_id_number, manual_passport_country, cached_name, manual_email, manual_phone, cached_email FROM transfer_parties
             WHERE id=$1 AND transfer_id=$2 AND accountable_institution_id=$3 FOR SHARE""", [party_id, transfer_id, ai], conn)
         if not parent.rows or not subject.rows or subject.rows[0]["entity_type"] != "person":
             raise IdVerificationError("subject_not_eligible")

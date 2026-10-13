@@ -44,6 +44,11 @@ function saveStore(store: HarnessStore) {
 let mode: 'sandbox' | 'fixture' | 'veriff-test' =
   new URLSearchParams(window.location.search).get('provider') === 'veriff' ? 'veriff-test' : 'sandbox'
 export const calls: { method: string; url: string }[] = []
+export function resetDemoSubject(partyId: string) {
+  const store = loadStore()
+  delete store.attempts[partyId]
+  saveStore(store)
+}
 
 export function simulateVeriffUiOutcome(partyId: string, status: 'pending' | 'verified' | 'declined' | 'review_required') {
   const store = loadStore()

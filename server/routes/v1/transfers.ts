@@ -36,7 +36,7 @@ async function proxyDeedly(req: Request, res: Response, path: string, method: 'G
       if (idVerification && upstream.status === 503) {
         try {
           const code: unknown = JSON.parse(body)?.error
-          if (typeof code === 'string' && ['configuration_unavailable', 'provider_unavailable', 'storage_unavailable'].includes(code)) {
+          if (typeof code === 'string' && ['configuration_unavailable', 'provider_unavailable', 'storage_unavailable', 'email_delivery_unavailable'].includes(code)) {
             res.status(503).json({ success: false, error: code })
             return
           }
@@ -1396,7 +1396,7 @@ router.get(
   })
 )
 
-for (const action of ['session', 'refresh', 'retry'] as const) {
+for (const action of ['session', 'refresh', 'retry', 'invitation'] as const) {
   router.post(
     `/:id/parties/:transfer_party_id/id-verification/${action}`,
     requireJwt,

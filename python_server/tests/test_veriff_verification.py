@@ -305,3 +305,10 @@ class RouteTests(unittest.TestCase):
         r = self.http.get(self.path(),headers=_auth())
         self.assertEqual(r.status_code,503,r.text)
         self.assertEqual(r.json()["error"],"configuration_unavailable")
+
+    def test_invitation_denies_clients_and_bad_contact_details_before_provider(self):
+        body = {'fullName':'Ada Example','email':'ada@example.invalid','phone':'+27821234567'}
+        for headers,payload,expected in [(_auth(role=4),body,403),(_auth(),{**body,'phone':'0821234567'},422),(_auth(),{**body,'sessionId':SID},422)]:
+            response = self.http.post(self.path('/invitation'),headers=headers,json=payload)
+            self.assertEqual(response.status_code,expected,response.text)
+        self.provider.create_session.assert_not_awaited()

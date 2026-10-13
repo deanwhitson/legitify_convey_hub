@@ -334,7 +334,7 @@ describe('v1 matter create + party attach BFF proxies', async () => {
     const subject = randomUUID()
     const token = makeToken()
     upstreamResponse = { status: 200, body: { message: 'OK', data: { provider: 'veriff', captureUrl: 'https://alchemy.veriff.com/v/synthetic' } } }
-    for (const action of ['session', 'refresh', 'retry']) {
+    for (const action of ['session', 'refresh', 'retry', 'invitation']) {
       const route = `/api/v1/transfers/${TRANSFER_ID}/parties/${subject}/id-verification/${action}`
       const res = await httpPost(route, { Authorization: `Bearer ${token}` }, {})
       assert.equal(res.status, 200)
@@ -372,7 +372,7 @@ describe('v1 matter create + party attach BFF proxies', async () => {
     const failed = await fetch(baseUrl + route, { headers: { Authorization: `Bearer ${token}` } })
     assert.equal(failed.status, 503)
     assert.equal((await failed.json()).error, 'provider_unavailable')
-    for (const code of ['configuration_unavailable', 'storage_unavailable']) {
+    for (const code of ['configuration_unavailable', 'storage_unavailable', 'email_delivery_unavailable']) {
       upstreamResponse = { status: 503, body: { success: false, error: code, sensitiveDetail: 'must not reach browser' } }
       const r = await fetch(baseUrl + route, { headers: { Authorization: `Bearer ${token}` } })
       assert.deepEqual(await r.json(), { success: false, error: code })

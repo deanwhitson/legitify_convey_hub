@@ -19,6 +19,7 @@ export interface IdVerificationPanelProps {
   onBehalfOfPartyId?: string
   onBehalfOfName?: string
   onClose: () => void
+  readOnly?: boolean
 }
 
 type ViewState =
@@ -44,7 +45,8 @@ export const IdVerificationStatusView: React.FC<{
   onStart?: () => void
   onRetry?: () => void
   onRefresh?: () => void
-}> = ({ data, busy, onStart, onRetry, onRefresh }) => {
+  readOnly?: boolean
+}> = ({ data, busy, onStart, onRetry, onRefresh, readOnly = false }) => {
   const label = STATUS_LABELS[data.status] ?? 'Unknown'
   return (
     <div className="space-y-3">
@@ -76,12 +78,12 @@ export const IdVerificationStatusView: React.FC<{
         </ul>
       )}
       <div className="flex flex-wrap gap-2">
-        {(data.status === 'not_started' || data.status === 'started' || data.status === 'pending') && (
+        {!readOnly && (data.status === 'not_started' || data.status === 'started' || data.status === 'pending') && (
           <Button size="sm" onClick={onStart} disabled={busy}>
             {data.status === 'not_started' ? 'Start verification' : 'Resume verification'}
           </Button>
         )}
-        {(data.status === 'retry_requested' || data.status === 'declined') && (
+        {!readOnly && (data.status === 'retry_requested' || data.status === 'declined') && (
           <Button size="sm" onClick={onRetry} disabled={busy}>
             Retry verification
           </Button>
@@ -147,6 +149,7 @@ export const IdVerificationPanel: React.FC<IdVerificationPanelProps> = ({
   onBehalfOfPartyId,
   onBehalfOfName,
   onClose,
+  readOnly = false,
 }) => {
   const [view, setView] = useState<ViewState>({ kind: 'loading' })
   const [busy, setBusy] = useState(false)
@@ -253,6 +256,7 @@ export const IdVerificationPanel: React.FC<IdVerificationPanelProps> = ({
       onStart={start}
       onRetry={retry}
       onRefresh={loadStatus}
+      readOnly={readOnly}
     />
   )
 

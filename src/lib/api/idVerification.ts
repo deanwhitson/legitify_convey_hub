@@ -63,6 +63,12 @@ function basePath(transferId: string, transferPartyId: string): string {
 }
 
 export const IdVerificationApi = {
+  sendInvitation(transferId: string, transferPartyId: string,
+    contact: { fullName: string; email: string; phone: string }, onBehalfOfPartyId?: string): Promise<Envelope<{ status: string }>> {
+    return apiRequest(`${basePath(transferId, transferPartyId)}/invitation`, {
+      method: 'POST', body: { ...contact, ...(onBehalfOfPartyId ? { onBehalfOfPartyId } : {}) },
+    })
+  },
   getStatus(transferId: string, transferPartyId: string): Promise<Envelope<IdVerificationStatusData>> {
     return apiRequest<Envelope<IdVerificationStatusData>>(basePath(transferId, transferPartyId))
   },

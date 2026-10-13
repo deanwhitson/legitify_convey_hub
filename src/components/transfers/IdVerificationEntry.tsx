@@ -3,6 +3,7 @@ import { ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { IdVerificationPanel } from './IdVerificationPanel'
 import type { Party } from './TransferForm'
+import { VerificationInvitation, type VerificationContact } from './VerificationInvitation'
 
 export interface IdVerificationEntryProps {
   /** The party card this entry point renders inside. */
@@ -11,6 +12,8 @@ export interface IdVerificationEntryProps {
   transferId?: string
   /** All parties, for selecting a natural-person representative. */
   allParties: Party[]
+  invitationDemo?: boolean
+  onConfirmContact?: (partyId: string, contact: VerificationContact) => void
 }
 
 /**
@@ -25,10 +28,18 @@ export const IdVerificationEntry: React.FC<IdVerificationEntryProps> = ({
   party,
   transferId,
   allParties,
+  invitationDemo = false,
+  onConfirmContact,
 }) => {
   const isPersonParty = !party.entityType || party.entityType === 'person'
   const [verifyOpen, setVerifyOpen] = useState(false)
   const [representativePartyId, setRepresentativePartyId] = useState('')
+  const [invitationConfirmed, setInvitationConfirmed] = useState(false)
+  const [contactConfirmed, setContactConfirmed] = useState(false)
+  const close = () => { setVerifyOpen(false); setInvitationConfirmed(false); setContactConfirmed(false) }
+  const confirm = (subject: Party, contact: VerificationContact) => {
+    onConfirmContact?.(subject.id, contact); setInvitationConfirmed(true); setContactConfirmed(true)
+  }
   const personSubjects = allParties.filter(
     p => (!p.entityType || p.entityType === 'person') && p.persistedPartyId && p.id !== party.id
   )
@@ -43,6 +54,7 @@ export const IdVerificationEntry: React.FC<IdVerificationEntryProps> = ({
           Save the matter to enable identity verification for this party.
         </p>
       ) : !verifyOpen ? (
+        <div className="flex flex-wrap gap-2">
         <Button
           variant="secondary"
           size="sm"
@@ -56,13 +68,19 @@ export const IdVerificationEntry: React.FC<IdVerificationEntryProps> = ({
           <ShieldCheck className="h-4 w-4 mr-1" />
           {isPersonParty ? 'Verify identity' : 'Verify representative'}
         </Button>
+        {isPersonParty && <Button variant="secondary" size="sm" onClick={() => { setVerifyOpen(true); setInvitationConfirmed(true) }}>View verification status</Button>}
+        </div>
+      ) : isPersonParty && !invitationConfirmed ? (
+        <VerificationInvitation key={party.persistedPartyId} party={party} transferId={transferId}
+          demo={invitationDemo} onConfirmed={contact => confirm(party, contact)} onCancel={close} />
       ) : isPersonParty ? (
         <IdVerificationPanel
           key={party.persistedPartyId}
           transferId={transferId}
           subjectPartyId={party.persistedPartyId}
           subjectName={party.name || 'Unnamed party'}
-          onClose={() => setVerifyOpen(false)}
+          readOnly={!invitationDemo || !contactConfirmed}
+          onClose={close}
         />
       ) : personSubjects.length === 0 ? (
         <p className="text-xs text-amber-700 dark:text-amber-300">
@@ -81,7 +99,7 @@ export const IdVerificationEntry: React.FC<IdVerificationEntryProps> = ({
             id={`representative-${party.id}`}
             className="w-full text-sm rounded-md border border-gray-300 dark:border-navy-600 bg-white dark:bg-navy-800 text-gray-700 dark:text-gray-200 px-2 py-1"
             value={representativePartyId}
-            onChange={e => setRepresentativePartyId(e.target.value)}
+            onChange={e => { setRepresentativePartyId(e.target.value); setInvitationConfirmed(false); setContactConfirmed(false) }}
           >
             <option value="">Choose a person…</option>
             {personSubjects.map(p => (
@@ -90,15 +108,21 @@ export const IdVerificationEntry: React.FC<IdVerificationEntryProps> = ({
               </option>
             ))}
           </select>
-          {representativeSubject ? (
+          {representativeSubject && !invitationConfirmed ? (
+            <VerificationInvitation key={`${party.persistedPartyId}:${representativeSubject.persistedPartyId}`}
+              party={representativeSubject} transferId={transferId} onBehalfOfPartyId={party.persistedPartyId}
+              onBehalfOfName={party.name || party.company} demo={invitationDemo}
+              onConfirmed={contact => confirm(representativeSubject, contact)} onCancel={close} />
+          ) : representativeSubject ? (
             <IdVerificationPanel
               key={`${party.persistedPartyId}:${representativeSubject.persistedPartyId}`}
               transferId={transferId}
               subjectPartyId={representativeSubject.persistedPartyId!}
               subjectName={representativeSubject.name || 'Unnamed party'}
+              readOnly={!invitationDemo || !contactConfirmed}
               onBehalfOfPartyId={party.persistedPartyId}
               onBehalfOfName={party.name || party.company || 'this entity'}
-              onClose={() => setVerifyOpen(false)}
+              onClose={close}
             />
           ) : (
             <Button variant="secondary" size="sm" onClick={() => setVerifyOpen(false)}>

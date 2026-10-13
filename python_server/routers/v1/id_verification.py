@@ -72,6 +72,10 @@ def _error(exc: IdVerificationError) -> JSONResponse:
         "creation_unresolved": 409,
         "subject_context_conflict": 409,
         "subject_changed": 409,
+        "email_delivery_unavailable": 503,
+        "contact_details_changed": 409,
+        "invalid_contact_details": 422,
+        "invitation_unresolved": 409,
     }.get(exc.code, 400)
     return JSONResponse(
         status_code=status,
@@ -175,6 +179,27 @@ def _subject_payload(subject_kind: str, on_behalf: Optional[dict]) -> dict:
         data["onBehalfOfPartyId"] = str(on_behalf["id"])
         data["onBehalfOfEntityType"] = on_behalf["entity_type"]
     return data
+
+
+@router.post("/{id}/parties/{transfer_party_id}/id-verification/invitation")
+async def send_id_verification_invitation(id: str, transfer_party_id: str, request: Request,
+    body: dict, user: CurrentUser = Depends(require_jwt)):
+    if user.is_client or not user.has_ability('transfers:write'):
+        raise HTTPException(status_code=403,detail='Forbidden')
+    try:
+        from services.verification_email import validate_contact
+        from services.verification_invitation import send_invitation
+        contact = validate_contact(body)
+        target = body.get('onBehalfOfPartyId')
+        if target is not None and not isinstance(target,str):
+            raise HTTPException(status_code=422,detail='onBehalfOfPartyId must be a UUID string')
+        ctx = await _resolve_context(request)
+        kind,_ = await _authorize_subject(user,id,transfer_party_id,target)
+        result = await send_invitation(ctx,ai=user.accountable_institution_id,transfer_id=id,
+            party_id=transfer_party_id,subject_kind=kind,contact=contact,on_behalf_of_party_id=target)
+    except IdVerificationError as exc:
+        return _error(exc)
+    return {'message':'OK','data':result}
 
 
 @router.get("/{id}/parties/{transfer_party_id}/id-verification")

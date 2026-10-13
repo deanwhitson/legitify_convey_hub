@@ -1,5 +1,11 @@
 # Hosted Veriff walkthrough
 
+Latest invitation walkthrough (13 October 2026):
+https://legitify-convey-9al21a7uu-dean-whitsons-projects.vercel.app.
+See `docs/veriff-email-invitations.md` for the confirmation/email-first flow
+and remaining real-delivery dependencies. The original deployment below is
+retained as historical evidence.
+
 Published 13 October 2026 at 12:16 SAST to the existing Vercel project
 `legitify-convey-hub` as a **Preview** deployment.
 
