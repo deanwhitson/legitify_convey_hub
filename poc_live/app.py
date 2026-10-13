@@ -159,7 +159,9 @@ async def home():
 
 @app.get('/api/health')
 async def health():
-    return {'service':'deedly-personal-passport-poc','mode':'live-trial','ready':bool(setting('POC_LIVE_API_KEY') and setting('POC_SMTP_PASSWORD') and setting('POC_DATABASE_URL'))}
+    required=('POC_OWNER_EMAIL','POC_ENCRYPTION_KEY','POC_LIVE_API_KEY','POC_LIVE_SHARED_SECRET',
+              'POC_LIVE_BASE_URL','POC_SMTP_HOST','POC_SMTP_USERNAME','POC_SMTP_PASSWORD','POC_DATABASE_URL')
+    return {'service':'deedly-personal-passport-poc','mode':'live-trial','ready':all(setting(k) for k in required)}
 
 @app.post('/api/auth/code')
 async def request_code(request:Request):

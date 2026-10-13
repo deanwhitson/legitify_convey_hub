@@ -24,5 +24,6 @@ q('confirm').onchange=()=>q('send').disabled=!q('confirm').checked;
 q('edit').onclick=()=>{q('review').hidden=true;q('inviteform').hidden=false;contact=null;requestId=null};
 q('send').onclick=async()=>{if(!contact||!q('confirm').checked||busy)return;busy=true;q('send').disabled=true;q('edit').disabled=true;error('');try{await api('/api/cases',{...contact,requestId,confirmRecipient:true});q('review').hidden=true;q('inviteform').hidden=false;q('inviteform').reset();contact=null;requestId=null;await load()}catch(e){error(e.message)}finally{busy=false;q('send').disabled=!q('confirm').checked;q('edit').disabled=false}};
 q('logout').onclick=async()=>{await api('/api/auth/logout',{});cases=[];render();q('workspace').hidden=true;q('login').hidden=false;q('codeform').hidden=true;challenge=null;if(timer)clearInterval(timer)};
+api('/api/health').then(d=>{q('loginmessage').textContent=d.ready?'Hosted backend configured. Sign in to continue.':'Server configuration is incomplete; sign-in may be unavailable.'}).catch(()=>{q('loginmessage').textContent='The backend readiness check could not complete.'});
 api('/api/cases').then(d=>{cases=d.cases;void signedIn()}).catch(()=>{});
 </script></body></html>
