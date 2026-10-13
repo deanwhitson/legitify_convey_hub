@@ -23,3 +23,9 @@ test('Invalid capture URL cannot become a browser link', () => {
   assert.match(html, /role="alert"/)
   assert.doesNotMatch(html, /href=/)
 })
+
+test('Hosted walkthrough cannot send users to a synthetic provider link', () => {
+  const html = renderToStaticMarkup(<VeriffCapture captureUrl="https://alchemy.veriff.com/v/synthetic" simulated demo />)
+  assert.match(html, /Capture preview only/)
+  assert.doesNotMatch(html, /href=/)
+})

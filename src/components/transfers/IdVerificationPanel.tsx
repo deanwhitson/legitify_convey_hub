@@ -275,7 +275,7 @@ export const IdVerificationPanel: React.FC<IdVerificationPanelProps> = ({
       {session.mode === 'fixture' ? (
         <FixtureCaptureNotice />
       ) : session.provider === 'veriff' ? (
-        <VeriffCapture captureUrl={session.captureUrl} simulated={session.simulated} />
+        <VeriffCapture captureUrl={session.captureUrl} simulated={session.simulated} demo={session.mode === 'veriff-test'} />
       ) : (
         <SumsubCapture
           accessToken={session.sdkToken}
