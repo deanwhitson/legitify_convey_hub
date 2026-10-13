@@ -175,3 +175,19 @@ This confirms API authentication/session creation/signed result retrieval,
 not passport authenticity or a deployed saved-party flow. The standalone
 connectivity binding and encrypted capture URL are retained locally outside
 this repository in workspace `output/veriff-poc/connection-test.json`.
+
+## Neon connection confirmed from the private configuration
+
+On 13 October 2026 Dean saved a new `DATABASE_URL` identifying `deedly_pilot`
+on `ep-muddy-dew-b71c24az.c-13.us-east-1.aws.neon.tech`. A read-only Psycopg
+connection test succeeded with certificate/hostname verification and the
+saved required channel binding retained. The saved file was not altered.
+`transfers.transfers` and `transfers.transfer_parties` exist, including the
+manual passport identity fields needed by the integration. The Veriff table
+is not present; no DDL, grants or record changes were performed.
+
+This tests the newly saved local connection, not the old Vercel deployment's
+configuration. Application use still needs the target configuration updated
+and driver compatibility resolved: the current asyncpg path does not support
+the saved `channel_binding=require` setting. The test used a libpq-backed
+driver specifically to preserve that requirement, rather than stripping it.
